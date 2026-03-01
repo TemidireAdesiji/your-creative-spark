@@ -204,8 +204,8 @@ const AddConditionModal=({onClose})=>{
     {id:"cp",   name:"Cerebral Palsy",               abbr:"CP",    color:C.gold,   bg:"#FBF4E0",     icon:<Icon name="balance"  size={18} color={C.gold}/>,   games:"GaitCam · Walk Quest · Romberg"},
   ];
   return(
-    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.55)",zIndex:1000,display:"flex",alignItems:"flex-end",WebkitOverflowScrolling:"touch"}}>
-      <div style={{width:"100%",background:"#fff",borderRadius:"28px 28px 0 0",padding:"0 0 0",animation:"slide-up .35s ease",maxHeight:"92dvh",display:"flex",flexDirection:"column",paddingBottom:"env(safe-area-inset-bottom,0px)"}}>
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.55)",zIndex:1100,display:"flex",alignItems:"flex-end",overflow:"hidden"}}>
+      <div style={{width:"100%",background:"#fff",borderRadius:"28px 28px 0 0",padding:"0 0 0",animation:"slide-up .35s ease",maxHeight:"85dvh",display:"flex",flexDirection:"column",paddingBottom:"env(safe-area-inset-bottom,0px)"}}>
         <div style={{padding:"14px 20px 0",display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0}}>
           <div style={{width:36,height:4,background:C.border,borderRadius:2,margin:"0 auto 0 calc(50% - 18px)"}}/>
           <button onClick={onClose} style={{background:C.bg2,border:"none",borderRadius:"50%",width:30,height:30,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}><Icon name="x" size={14} color={C.mid}/></button>
@@ -214,7 +214,7 @@ const AddConditionModal=({onClose})=>{
           <h2 style={{fontFamily:"Fraunces,serif",fontSize:24,fontWeight:900,color:C.black,margin:"0 0 3px"}}>Add Condition</h2>
           <p style={{margin:0,fontSize:12,color:C.mid,fontFamily:"DM Sans,sans-serif"}}>Select a condition to track · challenges auto-adapt</p>
         </div>
-        <div style={{overflowY:"auto",padding:"8px 20px 0",flex:1}}>
+        <div style={{overflowY:"auto",WebkitOverflowScrolling:"touch",padding:"8px 20px 20px",flex:1,minHeight:0}}>
           {step===0&&conditions.map(c=>(
             <button key={c.id} onClick={()=>setSelected(c.id===selected?null:c.id)} style={{width:"100%",background:"#fff",border:`1.5px solid ${selected===c.id?c.color:C.border}`,borderRadius:18,padding:"12px 14px",marginBottom:8,cursor:"pointer",display:"flex",gap:12,alignItems:"center",textAlign:"left",transition:"all .2s"}}>
               <div style={{width:42,height:42,borderRadius:12,background:c.bg,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{c.icon}</div>
@@ -1480,8 +1480,8 @@ const LogScreen=({addXP})=>{
 
       {/* Alert modal — NO DISMISS for severe */}
       {showModal&&(
-        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.55)",zIndex:998,display:"flex",alignItems:"flex-end",WebkitOverflowScrolling:"touch"}}>
-          <div style={{width:"100%",background:"#fff",borderRadius:"26px 26px 0 0",padding:"20px 20px 0",animation:"slide-up .3s ease",maxHeight:"90dvh",display:"flex",flexDirection:"column",overflowY:"auto",paddingBottom:"env(safe-area-inset-bottom,24px)"}}>
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.55)",zIndex:1100,display:"flex",alignItems:"flex-end",overflow:"hidden"}}>
+          <div style={{width:"100%",background:"#fff",borderRadius:"26px 26px 0 0",padding:"20px 20px 0",animation:"slide-up .3s ease",maxHeight:"80dvh",display:"flex",flexDirection:"column",overflowY:"auto",WebkitOverflowScrolling:"touch",paddingBottom:"calc(env(safe-area-inset-bottom, 0px) + 24px)"}}>
             <div style={{width:36,height:4,background:C.border,borderRadius:2,margin:"0 auto 16px",flexShrink:0}}/>
             {/* Severity banner */}
             <div style={{background:flare.bg,border:`1.5px solid ${flare.color}33`,borderRadius:16,padding:"12px 14px",marginBottom:14,display:"flex",gap:12,alignItems:"center"}}>
