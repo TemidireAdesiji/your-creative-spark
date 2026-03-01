@@ -89,8 +89,9 @@ const GlobalStyles=()=>{
     s.textContent=`
       @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap');
       *,*::before,*::after{box-sizing:border-box;font-family:'Poppins',sans-serif !important;}
-      html,body{width:100%;height:100%;height:100dvh;margin:0;padding:0;background:#fff;-webkit-font-smoothing:antialiased;overscroll-behavior:none;font-family:'Poppins',sans-serif !important;}
+      html,body{width:100%;height:100%;height:100dvh;margin:0;padding:0;background:#fff;-webkit-font-smoothing:antialiased;overscroll-behavior:none;font-family:'Poppins',sans-serif !important;overflow:hidden;}
       #root{width:100%;height:100%;height:100dvh;display:flex;flex-direction:column;overflow:hidden;}
+      #sm-scroll-container{-webkit-overflow-scrolling:touch !important;overflow-y:auto !important;touch-action:pan-y !important;}
       @keyframes pulse-ring{0%{transform:scale(.9);opacity:.7}50%{transform:scale(1.12);opacity:.15}100%{transform:scale(.9);opacity:.7}}
       @keyframes ping{0%{transform:scale(1);opacity:1}80%,100%{transform:scale(2.4);opacity:0}}
       @keyframes bounce-in{0%{transform:scale(.4);opacity:0}65%{transform:scale(1.08)}100%{transform:scale(1);opacity:1}}
@@ -1705,7 +1706,7 @@ export default function App(){
   const addXP=(amt)=>{setXP(p=>p+amt);setXpPop({show:true,val:amt});setTimeout(()=>setXpPop({show:false,val:0}),1600);};
   const openGameChallenge=(phase:string)=>{setTab("game");setGameInitialPhase(phase);};
   return(
-    <div style={{width:"100%",height:"100dvh",background:C.bg,display:"flex",flexDirection:"column",fontFamily:"DM Sans,sans-serif",position:"relative",overflow:"hidden",opacity:mounted?1:0,transition:"opacity .3s"}}>
+    <div style={{width:"100%",height:"100dvh",background:C.bg,display:"flex",flexDirection:"column",position:"relative",opacity:mounted?1:0,transition:"opacity .3s"}}>
       <GlobalStyles/>
       {xpPop.show&&<div style={{position:"fixed",top:"12%",left:"50%",transform:"translateX(-50%)",zIndex:9999,background:C.gold,color:"#fff",fontFamily:"Fraunces,serif",fontWeight:900,fontSize:20,padding:"9px 22px",borderRadius:100,animation:"bounce-in .4s cubic-bezier(.34,1.56,.64,1)",boxShadow:"0 8px 32px rgba(200,154,46,.45)",display:"flex",alignItems:"center",gap:6,pointerEvents:"none"}}><Icon name="star" size={16} color="#fff"/> +{xpPop.val} XP</div>}
       <div id="sm-scroll-container" style={{flex:1,overflowY:"auto",overflowX:"hidden",WebkitOverflowScrolling:"touch",height:0}}>
