@@ -151,7 +151,7 @@ const calcFlare=(vals)=>{
 
 /* ── Camera Viewfinder HUD ─────────────────────────────────────── */
 const CamHUD=({accent="#1DA39A",children,label,recording=false,metrics=[]})=>(
-  <div style={{width:"100%",aspectRatio:"4/3",borderRadius:22,background:"#080e0d",position:"relative",overflow:"hidden"}}>
+  <div style={{width:"min(100%, 88dvh)",height:"min(66dvh, calc((100vw - 40px) * 0.75))",margin:"0 auto",borderRadius:22,background:"#080e0d",position:"relative",overflow:"hidden"}}>
     {/* Simulated camera grain */}
     <div style={{position:"absolute",inset:0,backgroundImage:"url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E\")",opacity:.4}}/>
     {/* Viewfinder corners */}
@@ -358,13 +358,24 @@ const GameScreen=({addXP,initialPhase,onPhaseApplied}:{addXP:(n:number)=>void;in
   const animFrameRef=useRef<number>(0);
   const lastVideoTimeRef=useRef<number>(-1);
   const streamRef=useRef<MediaStream|null>(null);
-  const [phase,setPhase]=useState("choose");
+  const [phase,setPhase]=useState(() => {
+    if (initialPhase === "walkquest-ready" || initialPhase === "handfist-ready") {
+      return initialPhase;
+    }
+    if (initialPhase === "romberg" || initialPhase === "gaitcam") {
+      return "launching";
+    }
+    return "choose";
+  });
   const [pct,setPct]=useState(0);
   const [score,setScore]=useState<number|null>(null);
   const [cd,setCd]=useState<number|null>(null);
   const [cdColor,setCdColor]=useState(C.gaitAccent);
   const [poseReady,setPoseReady]=useState(false);
   const [liveMetrics,setLiveMetrics]=useState({stride:"--",symmetry:"--",cadence:"--"});
+  const [romMetrics,setRomMetrics]=useState({sway:"--",stability:"--",status:"Move into frame",standingStill:false});
+  const rombergPrevRef=useRef<Array<{x:number;y:number;visibility?:number}>|null>(null);
+  const rombergSamplesRef=useRef<number[]>([]);
 
   // Walk Quest
   const [walkTime,setWalkTime]=useState(120);
@@ -399,7 +410,7 @@ const GameScreen=({addXP,initialPhase,onPhaseApplied}:{addXP:(n:number)=>void;in
 
   const handDetection = useHandDetection(
     flappyVideoRef,
-    phase === "handfist-ready" || phase === "handfist"
+    phase === "handfist-ready" || (phase === "handfist" && flappyGamePhase === "playing")
   );
   const { armRaised: flappyFist, openHand: flappyOpenHand, cameraReady: flappyCameraReady, cameraError: flappyCameraError, poseDetected: flappyPoseDetected } = handDetection;
 
@@ -409,6 +420,9 @@ const GameScreen=({addXP,initialPhase,onPhaseApplied}:{addXP:(n:number)=>void;in
 
   // MediaPipe Pose connections for drawing
   const POSE_CONNECTIONS = [
+    [0,1],[1,2],[2,3],[3,7],
+    [0,4],[4,5],[5,6],[6,8],
+    [9,10],
     [11,12],[11,13],[13,15],[12,14],[14,16], // torso + arms
     [11,23],[12,24],[23,24],                  // hips
     [23,25],[25,27],[24,26],[26,28],          // legs
@@ -479,6 +493,7 @@ const GameScreen=({addXP,initialPhase,onPhaseApplied}:{addXP:(n:number)=>void;in
       if (result.landmarks && result.landmarks.length > 0) {
         const lm = result.landmarks[0];
         const w = canvas.width, h = canvas.height;
+        const accent = phase === "romberg" ? C.romAccent : C.gaitAccent;
 
         // Draw connections
         for (const [a, b] of POSE_CONNECTIONS) {
@@ -486,8 +501,8 @@ const GameScreen=({addXP,initialPhase,onPhaseApplied}:{addXP:(n:number)=>void;in
             ctx.beginPath();
             ctx.moveTo(lm[a].x * w, lm[a].y * h);
             ctx.lineTo(lm[b].x * w, lm[b].y * h);
-            ctx.strokeStyle = C.gaitAccent;
-            ctx.lineWidth = 3;
+            ctx.strokeStyle = accent;
+            ctx.lineWidth = phase === "romberg" ? 2.2 : 3;
             ctx.lineCap = "round";
             ctx.stroke();
           }
@@ -500,34 +515,88 @@ const GameScreen=({addXP,initialPhase,onPhaseApplied}:{addXP:(n:number)=>void;in
             ctx.arc(lm[i].x * w, lm[i].y * h, i < 11 ? 3 : 5, 0, 2 * Math.PI);
             ctx.fillStyle = "#fff";
             ctx.fill();
-            ctx.strokeStyle = C.gaitAccent;
-            ctx.lineWidth = 2;
+            ctx.strokeStyle = accent;
+            ctx.lineWidth = phase === "romberg" ? 1.5 : 2;
             ctx.stroke();
           }
         }
 
-        // Compute live metrics from landmarks
-        const lHip = lm[23], rHip = lm[24], lAnkle = lm[27], rAnkle = lm[28];
-        if (lHip && rHip && lAnkle && rAnkle) {
-          const hipWidth = Math.abs(lHip.x - rHip.x);
-          const strideEst = Math.round(hipWidth * 200 + 40);
-          const lLeg = Math.abs(lHip.y - lAnkle.y);
-          const rLeg = Math.abs(rHip.y - rAnkle.y);
-          const sym = Math.round((1 - Math.abs(lLeg - rLeg) / Math.max(lLeg, rLeg, 0.01)) * 100);
-          setLiveMetrics({ stride: `~${strideEst}cm`, symmetry: `${sym}%`, cadence: "Live" });
+        if (phase === "gaitcam") {
+          // Compute live metrics from landmarks
+          const lHip = lm[23], rHip = lm[24], lAnkle = lm[27], rAnkle = lm[28];
+          if (lHip && rHip && lAnkle && rAnkle) {
+            const hipWidth = Math.abs(lHip.x - rHip.x);
+            const strideEst = Math.round(hipWidth * 200 + 40);
+            const lLeg = Math.abs(lHip.y - lAnkle.y);
+            const rLeg = Math.abs(rHip.y - rAnkle.y);
+            const sym = Math.round((1 - Math.abs(lLeg - rLeg) / Math.max(lLeg, rLeg, 0.01)) * 100);
+            setLiveMetrics({ stride: `~${strideEst}cm`, symmetry: `${sym}%`, cadence: "Live" });
+          }
         }
+
+        if (phase === "romberg") {
+          const prev = rombergPrevRef.current;
+          let totalMovement = 0;
+          let trackedPoints = 0;
+
+          if (prev) {
+            for (let i = 0; i < lm.length; i++) {
+              const point = lm[i];
+              const prior = prev[i];
+              if (point && prior && point.visibility > 0.45) {
+                totalMovement += Math.hypot(point.x - prior.x, point.y - prior.y);
+                trackedPoints++;
+              }
+            }
+          }
+
+          rombergPrevRef.current = lm.map((point) =>
+            point ? { x: point.x, y: point.y, visibility: point.visibility } : { x: 0, y: 0, visibility: 0 }
+          );
+
+          const swayMm = prev && trackedPoints > 0 ? (totalMovement / trackedPoints) * 1200 : 0;
+          const stabilityScore = Math.max(0, Math.min(100, Math.round(100 - swayMm * 3.5)));
+          const standingStill = trackedPoints > 0 && swayMm < 12;
+          const status =
+            romPhase === "ready"
+              ? "Align shoulders, hips, knees, and feet in frame"
+              : romPhase === "eyes-open"
+                ? standingStill ? "Standing still" : "Moving"
+                : standingStill ? "Standing still" : "Moving";
+
+          if (romPhase === "eyes-open" || romPhase === "eyes-closed") {
+            rombergSamplesRef.current.push(swayMm);
+          }
+
+          setRomMetrics({
+            sway: trackedPoints > 0 ? `${swayMm.toFixed(1)}mm` : "--",
+            stability: trackedPoints > 0 ? `${stabilityScore}%` : "--",
+            status,
+            standingStill,
+          });
+        }
+      } else if (phase === "romberg") {
+        rombergPrevRef.current = null;
+        setRomMetrics({
+          sway: "--",
+          stability: "--",
+          status: "Move into frame so your whole body is visible",
+          standingStill: false,
+        });
       }
     }
     animFrameRef.current = requestAnimationFrame(detectPose);
-  }, []);
+  }, [phase, romPhase]);
 
   // Start/stop pose detection when gaitcam phase is active
   useEffect(() => {
-    if (phase === "gaitcam" && poseReady) {
+    const poseChallengeActive =
+      phase === "gaitcam" || (phase === "romberg" && romPhase !== "done");
+    if (poseChallengeActive && poseReady) {
       animFrameRef.current = requestAnimationFrame(detectPose);
     }
     return () => { if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current); };
-  }, [phase, poseReady, detectPose]);
+  }, [phase, romPhase, poseReady, detectPose]);
 
   // Cleanup landmarker on unmount
   useEffect(() => {
@@ -546,8 +615,8 @@ const GameScreen=({addXP,initialPhase,onPhaseApplied}:{addXP:(n:number)=>void;in
       streamRef.current=s;
       // If video element already exists, attach immediately
       if(videoRef.current){videoRef.current.srcObject=s;videoRef.current.play();}
-      // Init MediaPipe for gaitcam
-      if(gid==="gaitcam" && !poseLandmarkerRef.current) await initPoseLandmarker();
+      // Init MediaPipe for pose-based challenges
+      if((gid==="gaitcam" || gid==="romberg") && !poseLandmarkerRef.current) await initPoseLandmarker();
     }catch(e){console.error("Camera error:",e);}
     let c=3;const iv=setInterval(()=>{c--;if(c===0){clearInterval(iv);setCd(null);setPhase(gid);}else setCd(c);},1000);
   };
@@ -560,11 +629,31 @@ const GameScreen=({addXP,initialPhase,onPhaseApplied}:{addXP:(n:number)=>void;in
     }
   }, [phase]);
 
+  useEffect(() => {
+    if (phase !== "romberg" || romPhase !== "done") return;
+    cancelAnimationFrame(animFrameRef.current);
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+    if (videoRef.current?.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach((t) => t.stop());
+      videoRef.current.srcObject = null;
+    }
+    if (poseLandmarkerRef.current) {
+      poseLandmarkerRef.current.close();
+      poseLandmarkerRef.current = null;
+    }
+    setPoseReady(false);
+    rombergPrevRef.current = null;
+  }, [phase, romPhase]);
+
   // Apply initial phase when opening a challenge directly from Home
   useEffect(()=>{
     if(!initialPhase)return;
-    if(initialPhase==="romberg"){openCam("romberg",C.romAccent);onPhaseApplied?.();return;}
-    if(initialPhase==="gaitcam"){openCam("gaitcam",C.gaitAccent);onPhaseApplied?.();return;}
+    if(initialPhase==="romberg"){setPhase("launching");openCam("romberg",C.romAccent);onPhaseApplied?.();return;}
+    if(initialPhase==="gaitcam"){setPhase("launching");openCam("gaitcam",C.gaitAccent);onPhaseApplied?.();return;}
     if(initialPhase==="walkquest-ready"||initialPhase==="handfist-ready"){setPhase(initialPhase);onPhaseApplied?.();}
   },[initialPhase]);
 
@@ -583,6 +672,8 @@ const GameScreen=({addXP,initialPhase,onPhaseApplied}:{addXP:(n:number)=>void;in
     cancelAnimationFrame(animFrameRef.current);
     if(streamRef.current){streamRef.current.getTracks().forEach(t=>t.stop());streamRef.current=null;}
     if(videoRef.current)videoRef.current.srcObject=null;
+    rombergPrevRef.current=null;
+    rombergSamplesRef.current=[];
     setPct(0);setPhase("analyzing");
     const iv=setInterval(()=>setPct(p=>{if(p>=100){clearInterval(iv);const s=Math.floor(Math.random()*14)+73;setScore(s);setPhase(gid+"-done");addXP(35);return 100;}return p+2;}),60);
   };
@@ -590,8 +681,15 @@ const GameScreen=({addXP,initialPhase,onPhaseApplied}:{addXP:(n:number)=>void;in
   const reset=()=>{
     cancelAnimationFrame(animFrameRef.current);
     if(streamRef.current){streamRef.current.getTracks().forEach(t=>t.stop());streamRef.current=null;}
-    setPhase("choose");setScore(null);setPct(0);setWalkTime(120);setWalkActive(false);setWalkDone(false);setRomPhase("ready");setRomTime(30);setRomScores({});setSteps(0);setPoseReady(false);setLiveMetrics({stride:"--",symmetry:"--",cadence:"--"});
+    if(videoRef.current?.srcObject){
+      const stream = videoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach((t)=>t.stop());
+      videoRef.current.srcObject = null;
+    }
+    setPhase("choose");setScore(null);setPct(0);setWalkTime(120);setWalkActive(false);setWalkDone(false);setRomPhase("ready");setRomTime(30);setRomScores({});setSteps(0);setPoseReady(false);setLiveMetrics({stride:"--",symmetry:"--",cadence:"--"});setRomMetrics({sway:"--",stability:"--",status:"Move into frame",standingStill:false});
     setFlappyGamePhase("menu");setFlappyScore(0);
+    rombergPrevRef.current=null;
+    rombergSamplesRef.current=[];
     clearInterval(walkRef.current);clearInterval(beatRef.current);
     if(flappyAnimRef.current) cancelAnimationFrame(flappyAnimRef.current);
     if(poseLandmarkerRef.current){poseLandmarkerRef.current.close();poseLandmarkerRef.current=null;}
@@ -623,7 +721,7 @@ const GameScreen=({addXP,initialPhase,onPhaseApplied}:{addXP:(n:number)=>void;in
   // Romberg timer
   useEffect(()=>{
     if(phase!=="romberg"||(romPhase!=="eyes-open"&&romPhase!=="eyes-closed"))return;
-    const iv=setInterval(()=>{setRomTime(t=>{if(t<=1){clearInterval(iv);const sw=Math.floor(Math.random()*25)+5;setRomScores(prev=>{const next={...prev,[romPhase]:sw};if(romPhase==="eyes-open"){setRomPhase("eyes-closed");setRomTime(30);}else{setRomPhase("done");addXP(35);}return next;});return 30;}return t-1;});},1000);
+    const iv=setInterval(()=>{setRomTime(t=>{if(t<=1){clearInterval(iv);const samples=rombergSamplesRef.current;const sway=samples.length?Math.round(samples.reduce((sum,val)=>sum+val,0)/samples.length):0;setRomScores(prev=>{const next={...prev,[romPhase]:sway};if(romPhase==="eyes-open"){setRomPhase("eyes-closed");setRomTime(30);rombergSamplesRef.current=[];rombergPrevRef.current=null;}else{setRomPhase("done");addXP(35);}return next;});return 30;}return t-1;});},1000);
     return()=>clearInterval(iv);
   },[phase,romPhase]);
 
@@ -813,7 +911,7 @@ const GameScreen=({addXP,initialPhase,onPhaseApplied}:{addXP:(n:number)=>void;in
               ref={flappyCanvasRef}
               width={GAME_WIDTH}
               height={GAME_HEIGHT}
-              style={{display:"block",width:"100%",maxHeight:"70dvh",objectFit:"contain",background:FLAPPY_COLORS.sky}}
+              style={{display:"block",width:"min(100%, 88dvh)",height:"min(66dvh, calc((100vw - 40px) * 1.5))",margin:"0 auto",objectFit:"contain",background:FLAPPY_COLORS.sky}}
             />
             {/* Menu overlay */}
             <div style={{position:"absolute",inset:0,background:FLAPPY_COLORS.overlay,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:20,textAlign:"center"}}>
@@ -842,7 +940,7 @@ const GameScreen=({addXP,initialPhase,onPhaseApplied}:{addXP:(n:number)=>void;in
             ref={flappyCanvasRef}
             width={GAME_WIDTH}
             height={GAME_HEIGHT}
-            style={{display:"block",width:"100%",maxHeight:"70dvh",objectFit:"contain",borderRadius:12,boxShadow:"0 8px 32px rgba(0,0,0,0.15)"}}
+            style={{display:"block",width:"min(100%, 88dvh)",height:"min(66dvh, calc((100vw - 40px) * 1.5))",margin:"0 auto",objectFit:"contain",borderRadius:12,boxShadow:"0 8px 32px rgba(0,0,0,0.15)"}}
           />
           <p style={{margin:"8px 0 0",fontSize:11,color:C.mid,fontFamily:"DM Sans,sans-serif"}}>Fist ↑ · Open hand ↓</p>
         </div>
@@ -856,7 +954,7 @@ const GameScreen=({addXP,initialPhase,onPhaseApplied}:{addXP:(n:number)=>void;in
               ref={flappyCanvasRef}
               width={GAME_WIDTH}
               height={GAME_HEIGHT}
-              style={{display:"block",width:"100%",maxHeight:"70dvh",objectFit:"contain",background:FLAPPY_COLORS.sky}}
+              style={{display:"block",width:"min(100%, 88dvh)",height:"min(66dvh, calc((100vw - 40px) * 1.5))",margin:"0 auto",objectFit:"contain",background:FLAPPY_COLORS.sky}}
             />
             <div style={{position:"absolute",inset:0,background:FLAPPY_COLORS.overlay,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:20,textAlign:"center"}}>
               <p style={{margin:0,fontSize:14,fontWeight:800,color:FLAPPY_COLORS.birdBeak,fontFamily:"DM Sans,sans-serif"}}>GAME OVER</p>
@@ -958,61 +1056,55 @@ const GameScreen=({addXP,initialPhase,onPhaseApplied}:{addXP:(n:number)=>void;in
       {phase==="romberg"&&romPhase!=="done"&&(
         <div style={{padding:"0 20px"}}>
           <CamHUD accent={C.romAccent} label={`ROMBERG · ${romPhase==="ready"?"READY":romPhase==="eyes-open"?"PHASE 1 · EYES OPEN":"PHASE 2 · EYES CLOSED"}`} recording={romPhase!=="ready"}
-            metrics={romPhase!=="ready"?[{l:"Phase",v:romPhase==="eyes-open"?"1/2":"2/2"},{l:"Time",v:romTime+"s",hi:true},{l:"Sway",v:"Tracking"}]:[]}>
-            <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:14,padding:"0 16px"}}>
-              {/* Standing figure */}
-              <svg width="54" height="96" viewBox="0 0 54 96" style={{animation:romPhase==="eyes-closed"?"sway-closed 1.8s ease-in-out infinite":romPhase==="eyes-open"?"sway 2.5s ease-in-out infinite":"none"}}>
-                <circle cx="27" cy="9" r="8" fill="rgba(255,255,255,.9)"/>
-                {/* Eyes */}
-                {romPhase==="eyes-open"?<><circle cx="24" cy="8" r="1.5" fill={C.romAccent}/><circle cx="30" cy="8" r="1.5" fill={C.romAccent}/></>
-                  :<><line x1="22" y1="7.5" x2="26" y2="9.5" stroke={C.romAccent} strokeWidth="1.5" strokeLinecap="round"/><line x1="28" y1="7.5" x2="32" y2="9.5" stroke={C.romAccent} strokeWidth="1.5" strokeLinecap="round"/></>}
-                <line x1="27" y1="17" x2="27" y2="55" stroke="rgba(255,255,255,.9)" strokeWidth="3" strokeLinecap="round"/>
-                <line x1="27" y1="30" x2="12" y2="46" stroke="rgba(255,255,255,.8)" strokeWidth="2.5" strokeLinecap="round"/>
-                <line x1="27" y1="30" x2="42" y2="46" stroke="rgba(255,255,255,.8)" strokeWidth="2.5" strokeLinecap="round"/>
-                <line x1="27" y1="55" x2="19" y2="82" stroke="rgba(255,255,255,.85)" strokeWidth="3" strokeLinecap="round"/>
-                <line x1="27" y1="55" x2="35" y2="82" stroke="rgba(255,255,255,.85)" strokeWidth="3" strokeLinecap="round"/>
-                {/* Feet together */}
-                <ellipse cx="19" cy="85" rx="5" ry="2.5" fill={C.romAccent} opacity=".8"/>
-                <ellipse cx="35" cy="85" rx="5" ry="2.5" fill={C.romAccent} opacity=".8"/>
-                {/* Sway trail dots when active */}
-                {(romPhase==="eyes-open"||romPhase==="eyes-closed")&&[...Array(4)].map((_,i)=>(
-                  <circle key={i} cx={27+(i-1.5)*4} cy={10+i*2} r="1" fill={C.romAccent} opacity={(i+1)*.15}/>
-                ))}
+            metrics={romPhase!=="ready"?[{l:"Phase",v:romPhase==="eyes-open"?"1/2":"2/2"},{l:"Time",v:romTime+"s",hi:true}]:[]}>
+            <div style={{position:"absolute",inset:0}}>
+              <video ref={videoRef} autoPlay muted playsInline style={{width:"100%",height:"100%",objectFit:"cover",position:"absolute",inset:0,transform:"scaleX(-1)"}}/>
+              <canvas ref={canvasRef} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",pointerEvents:"none",transform:"scaleX(-1)"}}/>
+              <div style={{position:"absolute",inset:0,background:"linear-gradient(to top,rgba(0,0,0,.35),rgba(0,0,0,.08))"}}/>
+              <svg style={{position:"absolute",inset:0,pointerEvents:"none"}} width="100%" height="100%" viewBox="0 0 100 100">
+                <line x1="50" y1="6" x2="50" y2="94" stroke={`${C.romAccent}33`} strokeWidth=".5" strokeDasharray="2 4"/>
+                <line x1="15" y1="72" x2="85" y2="72" stroke={`${C.romAccent}33`} strokeWidth=".5" strokeDasharray="4 4"/>
               </svg>
-              {/* Concentric rings */}
-              <svg style={{position:"absolute",bottom:30,opacity:.12}} width="120" height="50" viewBox="0 0 120 50">
-                <ellipse cx="60" cy="25" rx="55" ry="20" stroke={C.romAccent} strokeWidth="1" fill="none" strokeDasharray="4 4"/>
-                <ellipse cx="60" cy="25" rx="35" ry="12" stroke={C.romAccent} strokeWidth="1" fill="none"/>
-                <ellipse cx="60" cy="25" rx="15" ry="5" stroke={C.romAccent} strokeWidth="1" fill="none"/>
-              </svg>
+              {!poseReady&&(
+                <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:10}}>
+                  <div style={{width:36,height:36,borderRadius:"50%",border:`3px solid rgba(168,85,247,.25)`,borderTopColor:C.romAccent,animation:"spin 1s linear infinite"}}/>
+                  <p style={{color:C.romAccent,fontSize:10,letterSpacing:2,margin:0,fontFamily:"DM Sans,sans-serif"}}>LOADING BODY TRACKING...</p>
+                </div>
+              )}
               {romPhase==="ready"&&(
-                <div style={{background:"rgba(0,0,0,.5)",borderRadius:14,padding:"10px 16px",textAlign:"center",maxWidth:200}}>
+                <div style={{position:"absolute",left:"50%",top:"50%",transform:"translate(-50%,-50%)",background:"rgba(0,0,0,.5)",borderRadius:14,padding:"10px 16px",textAlign:"center",maxWidth:200}}>
                   <p style={{margin:"0 0 3px",fontSize:12,fontWeight:600,color:"#fff",fontFamily:"DM Sans,sans-serif"}}>Stand still, feet together</p>
                   <p style={{margin:0,fontSize:10,color:"rgba(255,255,255,.55)",fontFamily:"DM Sans,sans-serif"}}>Arms at sides · camera will track your sway</p>
                 </div>
               )}
               {romPhase==="eyes-open"&&(
-                <div style={{background:"rgba(0,0,0,.5)",borderRadius:14,padding:"8px 14px",textAlign:"center"}}>
+                <div style={{position:"absolute",left:"50%",bottom:58,transform:"translateX(-50%)",background:"rgba(0,0,0,.5)",borderRadius:14,padding:"8px 14px",textAlign:"center"}}>
                   <p style={{margin:0,fontSize:11,color:"rgba(255,255,255,.8)",fontFamily:"DM Sans,sans-serif"}}>Look straight ahead · stay still</p>
                 </div>
               )}
               {romPhase==="eyes-closed"&&(
-                <div style={{background:"rgba(168,85,247,.3)",border:`1px solid ${C.romAccent}55`,borderRadius:14,padding:"8px 14px",textAlign:"center"}}>
+                <div style={{position:"absolute",left:"50%",bottom:58,transform:"translateX(-50%)",background:"rgba(168,85,247,.3)",border:`1px solid ${C.romAccent}55`,borderRadius:14,padding:"8px 14px",textAlign:"center"}}>
                   <p style={{margin:0,fontSize:11,color:"rgba(255,255,255,.9)",fontWeight:600,fontFamily:"DM Sans,sans-serif"}}>Eyes closed — keep still</p>
+                </div>
+              )}
+              {(romPhase==="eyes-open"||romPhase==="eyes-closed")&&(
+                <div style={{position:"absolute",left:12,bottom:54,background:romMetrics.standingStill?"rgba(34,197,94,.22)":"rgba(239,68,68,.22)",border:`1px solid ${romMetrics.standingStill?"rgba(34,197,94,.45)":"rgba(239,68,68,.45)"}`,backdropFilter:"blur(6px)",borderRadius:999,padding:"7px 12px",display:"flex",alignItems:"center",gap:8}}>
+                  <div style={{width:8,height:8,borderRadius:"50%",background:romMetrics.standingStill?"#22C55E":"#EF4444"}}/>
+                  <span style={{fontSize:11,fontWeight:700,color:"#fff",fontFamily:"DM Sans,sans-serif"}}>{romMetrics.standingStill?"Standing still":"Moving"}</span>
                 </div>
               )}
             </div>
           </CamHUD>
           <div style={{marginTop:10}}>
             {romPhase==="ready"&&(
-              <button onClick={()=>setRomPhase("eyes-open")} style={{width:"100%",padding:"14px",borderRadius:100,border:"none",background:`linear-gradient(90deg,${C.romBg},#3b1f5e)`,color:"#fff",fontSize:14,fontWeight:700,fontFamily:"DM Sans,sans-serif",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+              <button onClick={()=>{rombergSamplesRef.current=[];rombergPrevRef.current=null;setRomTime(30);setRomPhase("eyes-open");}} style={{width:"100%",padding:"14px",borderRadius:100,border:"none",background:`linear-gradient(90deg,${C.romBg},#3b1f5e)`,color:"#fff",fontSize:14,fontWeight:700,fontFamily:"DM Sans,sans-serif",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
                 <Icon name="eye" size={16} color="#fff"/> Begin Phase 1 — Eyes Open
               </button>
             )}
             {(romPhase==="eyes-open"||romPhase==="eyes-closed")&&(
               <div style={{background:C.romAccentLight,borderRadius:16,padding:"11px 14px",display:"flex",gap:10,alignItems:"center"}}>
                 <Icon name={romPhase==="eyes-open"?"eye":"eyeoff"} size={14} color={C.romAccent}/>
-                <p style={{margin:0,fontSize:11,color:"#3b1f5e",fontFamily:"DM Sans,sans-serif",fontWeight:500}}>{romPhase==="eyes-open"?"Hold still, eyes open — 30 seconds":"Eyes CLOSED — hold your balance — 30 seconds"}</p>
+                <p style={{margin:0,fontSize:11,color:"#3b1f5e",fontFamily:"DM Sans,sans-serif",fontWeight:500}}>{romMetrics.status}</p>
               </div>
             )}
           </div>
@@ -1028,12 +1120,19 @@ const GameScreen=({addXP,initialPhase,onPhaseApplied}:{addXP:(n:number)=>void;in
             <div style={{background:"rgba(255,255,255,.12)",borderRadius:14,padding:"8px 14px",display:"inline-flex",gap:6,alignItems:"center",marginTop:8}}><Icon name="star" size={13} color={C.gold}/><span style={{fontSize:12,fontWeight:700,color:"#fff",fontFamily:"DM Sans,sans-serif"}}>+35 XP earned</span></div>
           </div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
-            {[{l:"Eyes Open Sway",v:`${romScores["eyes-open"]??12}mm`},{l:"Eyes Closed Sway",v:`${romScores["eyes-closed"]??22}mm`},{l:"Romberg Ratio",v:`${Math.round(((romScores["eyes-closed"]??22)/(romScores["eyes-open"]??12))*10)/10}×`},{l:"Balance Score",v:"74/100",accent:true}].map((m,i)=>(
+            {[{l:"Eyes Open Sway",v:`${romScores["eyes-open"]??0}mm`},{l:"Eyes Closed Sway",v:`${romScores["eyes-closed"]??0}mm`},{l:"Romberg Ratio",v:`${Math.round((((romScores["eyes-closed"]??0)/Math.max(romScores["eyes-open"]??1,1))*10))/10}×`},{l:"Balance Score",v:`${Math.max(0,100-Math.round(((romScores["eyes-open"]??0)+(romScores["eyes-closed"]??0))*1.4))}/100`,accent:true}].map((m,i)=>(
               <div key={i} style={{background:m.accent?C.romAccentLight:C.bg2,borderRadius:14,padding:"12px"}}>
                 <p style={{margin:"0 0 4px",fontSize:9,color:C.mid,fontFamily:"DM Sans,sans-serif",textTransform:"uppercase",letterSpacing:.7}}>{m.l}</p>
                 <p style={{margin:0,fontSize:22,fontWeight:900,fontFamily:"Fraunces,serif",color:m.accent?C.romAccent:C.black}}>{m.v}</p>
               </div>
             ))}
+          </div>
+          <div style={{background:(romScores["eyes-closed"]??0)<12?C.tealLight:C.redLight,border:`1px solid ${(romScores["eyes-closed"]??0)<12?C.teal+"33":C.red+"33"}`,borderRadius:16,padding:"12px 14px",marginBottom:12,display:"flex",alignItems:"center",gap:10}}>
+            <div style={{width:10,height:10,borderRadius:"50%",background:(romScores["eyes-closed"]??0)<12?C.teal:C.red,flexShrink:0}}/>
+            <div>
+              <p style={{margin:"0 0 2px",fontSize:12,fontWeight:700,color:C.black,fontFamily:"DM Sans,sans-serif"}}>{(romScores["eyes-closed"]??0)<12?"Result: standing still":"Result: movement detected"}</p>
+              <p style={{margin:0,fontSize:11,color:C.mid,fontFamily:"DM Sans,sans-serif"}}>{(romScores["eyes-closed"]??0)<12?"Body sway stayed within the stillness threshold during the balance phase.":"Body sway exceeded the stillness threshold during the balance phase."}</p>
+            </div>
           </div>
           <div style={{display:"flex",gap:10}}><Btn label="Try Again" onClick={reset} variant="outline"/><Btn label="Save" icon={<Icon name="check" size={13} color="#fff"/>} onClick={()=>alert("Saved!")} variant="teal"/></div>
         </div>
