@@ -1052,11 +1052,11 @@ const GameScreen=({addXP,initialPhase,onPhaseApplied}:{addXP:(n:number)=>void;in
           <div style={{background:C.bg2,borderRadius:18,padding:"14px",marginTop:4}}>
             <p style={{margin:"0 0 10px",fontSize:12,fontWeight:600,color:C.black,fontFamily:"DM Sans,sans-serif"}}>Clinical standards used</p>
             {[
-              {icon:<Icon name="walk"    size={13} color={C.walkAccent}/>, text:"Walk Quest: 2-Minute Walk Test (2MWT) — validated for HSP, Pompe, and neuromuscular conditions"},
-              {icon:<Icon name="balance" size={13} color={C.romAccent}/>, text:"Romberg Challenge: Romberg sign test — standard neurological balance assessment"},
-              {icon:<Icon name="skeleton" size={13} color={C.gaitAccent}/>,text:"GaitCam: MediaPipe Pose landmarks — real-time pediatric gait pattern capture"},
-              {icon:<Icon name="hand"     size={13} color={C.handAccent}/>, text:"Fist Open/Close: Flappy Hand — fist = fly up, open hand = fly down (MediaPipe Hands)"},
-              {icon:<Icon name="hand"     size={13} color={C.handAccent}/>, text:"Hand Track: MediaPipe Hand Landmarker — 21-point hand skeleton for dexterity assessment"},
+              {icon:<Icon name="walk"    size={13} color={C.walkAccent}/>, text:"Walk Quest: 2-Minute Walk Test (2MWT) · validated for HSP, Pompe, and neuromuscular conditions"},
+              {icon:<Icon name="balance" size={13} color={C.romAccent}/>, text:"Romberg Challenge: Romberg sign test · standard neurological balance assessment"},
+              {icon:<Icon name="skeleton" size={13} color={C.gaitAccent}/>,text:"GaitCam: MediaPipe Pose landmarks · real-time pediatric gait pattern capture"},
+              {icon:<Icon name="hand"     size={13} color={C.handAccent}/>, text:"Fist Open/Close: Flappy Hand · fist = fly up, open hand = fly down (MediaPipe Hands)"},
+              {icon:<Icon name="hand"     size={13} color={C.handAccent}/>, text:"Hand Track: MediaPipe Hand Landmarker · 21-point hand skeleton for dexterity assessment"},
             ].map((r,i)=>(
               <div key={i} style={{display:"flex",gap:10,alignItems:"flex-start",marginBottom:i<3?8:0}}>
                 <div style={{width:26,height:26,borderRadius:8,background:"#fff",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{r.icon}</div>
