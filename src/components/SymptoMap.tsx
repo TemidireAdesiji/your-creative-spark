@@ -213,16 +213,6 @@ const AddConditionModal=({onClose})=>{
     {id:"cp",   name:"Cerebral Palsy",               abbr:"CP",    color:C.gold,   bg:"#FBF4E0",     icon:<Icon name="balance"  size={18} color={C.gold}/>,   games:"GaitCam · Walk Quest · Romberg"},
   ];
 
-  // Lock parent scroll on iOS when modal is open
-  useEffect(()=>{
-    const scrollEl=document.getElementById("sm-scroll-container");
-    if(scrollEl) scrollEl.style.overflow="hidden";
-    document.body.style.overflow="hidden";
-    return ()=>{
-      if(scrollEl) scrollEl.style.overflow="";
-      document.body.style.overflow="";
-    };
-  },[]);
 
   return(
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.55)",zIndex:1100,display:"flex",alignItems:"flex-end"}} onClick={onClose}>
@@ -1493,15 +1483,6 @@ const GameScreen=({addXP,initialPhase,onPhaseApplied}:{addXP:(n:number)=>void;in
 
 /* ── Flare Alert Modal ──────────────────────────────────────────── */
 const FlareModal=({flare,sendAlert,setShowModal})=>{
-  useEffect(()=>{
-    const scrollEl=document.getElementById("sm-scroll-container");
-    if(scrollEl) scrollEl.style.overflow="hidden";
-    document.body.style.overflow="hidden";
-    return ()=>{
-      if(scrollEl) scrollEl.style.overflow="";
-      document.body.style.overflow="";
-    };
-  },[]);
   return(
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.55)",zIndex:1100,display:"flex",alignItems:"flex-end"}}>
       <div style={{width:"100%",background:"#fff",borderRadius:"26px 26px 0 0",padding:"20px 20px",animation:"slide-up .3s ease",maxHeight:"75dvh",display:"flex",flexDirection:"column",overflowY:"scroll",WebkitOverflowScrolling:"touch",overscrollBehavior:"contain",paddingBottom:"calc(env(safe-area-inset-bottom, 0px) + 28px)"}}>
