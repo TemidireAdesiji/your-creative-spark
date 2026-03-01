@@ -328,6 +328,7 @@ const GameScreen=({addXP})=>{
   const poseLandmarkerRef=useRef<PoseLandmarker|null>(null);
   const animFrameRef=useRef<number>(0);
   const lastVideoTimeRef=useRef<number>(-1);
+  const streamRef=useRef<MediaStream|null>(null);
   const [phase,setPhase]=useState("choose");
   const [pct,setPct]=useState(0);
   const [score,setScore]=useState<number|null>(null);
@@ -488,7 +489,9 @@ const GameScreen=({addXP})=>{
   const openCam=async(gid:string,accent:string)=>{
     setCdColor(accent); setCd(3);
     try{
-      const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment",width:{ideal:640},height:{ideal:480}}});
+      const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user",width:{ideal:640},height:{ideal:480}}});
+      streamRef.current=s;
+      // If video element already exists, attach immediately
       if(videoRef.current){videoRef.current.srcObject=s;videoRef.current.play();}
       // Init MediaPipe for gaitcam
       if(gid==="gaitcam" && !poseLandmarkerRef.current) await initPoseLandmarker();
@@ -496,15 +499,25 @@ const GameScreen=({addXP})=>{
     let c=3;const iv=setInterval(()=>{c--;if(c===0){clearInterval(iv);setCd(null);setPhase(gid);}else setCd(c);},1000);
   };
 
+  // Attach stream to video element whenever it mounts (phase changes)
+  useEffect(()=>{
+    if(videoRef.current && streamRef.current && !videoRef.current.srcObject){
+      videoRef.current.srcObject=streamRef.current;
+      videoRef.current.play().catch(()=>{});
+    }
+  }, [phase]);
+
   const analyze=(gid:string)=>{
     cancelAnimationFrame(animFrameRef.current);
-    if(videoRef.current?.srcObject)(videoRef.current.srcObject as MediaStream).getTracks().forEach(t=>t.stop());
+    if(streamRef.current){streamRef.current.getTracks().forEach(t=>t.stop());streamRef.current=null;}
+    if(videoRef.current)videoRef.current.srcObject=null;
     setPct(0);setPhase("analyzing");
     const iv=setInterval(()=>setPct(p=>{if(p>=100){clearInterval(iv);const s=Math.floor(Math.random()*14)+73;setScore(s);setPhase(gid+"-done");addXP(35);return 100;}return p+2;}),60);
   };
 
   const reset=()=>{
     cancelAnimationFrame(animFrameRef.current);
+    if(streamRef.current){streamRef.current.getTracks().forEach(t=>t.stop());streamRef.current=null;}
     setPhase("choose");setScore(null);setPct(0);setWalkTime(120);setWalkActive(false);setWalkDone(false);setRomPhase("ready");setRomTime(30);setRomScores({});setSteps(0);setPoseReady(false);setLiveMetrics({stride:"--",symmetry:"--",cadence:"--"});
     clearInterval(walkRef.current);clearInterval(beatRef.current);
     if(poseLandmarkerRef.current){poseLandmarkerRef.current.close();poseLandmarkerRef.current=null;}
@@ -755,7 +768,7 @@ const GameScreen=({addXP})=>{
             metrics={[{l:"Stride",v:liveMetrics.stride},{l:"Symmetry",v:liveMetrics.symmetry,hi:liveMetrics.symmetry!=="--"},{l:"Tracking",v:poseReady?"Active":"Init...",hi:poseReady}]}>
             <div style={{position:"absolute",inset:0}}>
               {/* Live video feed */}
-              <video ref={videoRef} autoPlay muted playsInline style={{width:"100%",height:"100%",objectFit:"cover",opacity:.45,position:"absolute",inset:0,transform:"scaleX(-1)"}}/>
+              <video ref={videoRef} autoPlay muted playsInline style={{width:"100%",height:"100%",objectFit:"cover",position:"absolute",inset:0,transform:"scaleX(-1)"}}/>
               {/* MediaPipe pose canvas overlay */}
               <canvas ref={canvasRef} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",pointerEvents:"none",transform:"scaleX(-1)"}}/>
               {/* Grid guides */}
