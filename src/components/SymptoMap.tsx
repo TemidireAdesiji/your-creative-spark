@@ -254,7 +254,7 @@ const AddConditionModal=({onClose})=>{
           <h2 style={{fontFamily:"Fraunces,serif",fontSize:24,fontWeight:900,color:C.black,margin:"0 0 3px"}}>Add Condition</h2>
           <p style={{margin:0,fontSize:12,color:C.mid,fontFamily:"DM Sans,sans-serif"}}>Select a condition to track · challenges auto-adapt</p>
         </div>
-        <div style={{overflowY:"auto",WebkitOverflowScrolling:"touch",overscrollBehavior:"contain",padding:"6px 20px 40px",flex:"1 1 auto",minHeight:0,touchAction:"pan-y",msOverflowStyle:"auto"}}>
+        <div style={{overflowY:"auto",WebkitOverflowScrolling:"touch",overscrollBehavior:"contain",padding:"6px 20px 56px",flex:"1 1 auto",minHeight:0,touchAction:"pan-y",msOverflowStyle:"auto"}}>
           {step===0&&conditions.map(c=>(
             <button key={c.id} onClick={()=>setSelected(c.id===selected?null:c.id)} style={{width:"100%",background:"#fff",border:`1.5px solid ${selected===c.id?c.color:C.border}`,borderRadius:18,padding:"12px 14px",marginBottom:8,cursor:"pointer",display:"flex",gap:12,alignItems:"center",textAlign:"left",transition:"all .2s"}}>
               <div style={{width:42,height:42,borderRadius:12,background:c.bg,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{c.icon}</div>
