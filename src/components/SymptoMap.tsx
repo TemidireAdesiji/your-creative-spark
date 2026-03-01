@@ -87,9 +87,9 @@ const GlobalStyles=()=>{
     if(document.getElementById("sm-styles"))return;
     const s=document.createElement("style");s.id="sm-styles";
     s.textContent=`
-      @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,700;9..144,900&family=DM+Sans:wght@300;400;500;600;700&display=swap');
-      *,*::before,*::after{box-sizing:border-box;}
-      html,body{width:100%;height:100%;height:100dvh;margin:0;padding:0;background:#fff;-webkit-font-smoothing:antialiased;overscroll-behavior:none;}
+      @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap');
+      *,*::before,*::after{box-sizing:border-box;font-family:'Poppins',sans-serif !important;}
+      html,body{width:100%;height:100%;height:100dvh;margin:0;padding:0;background:#fff;-webkit-font-smoothing:antialiased;overscroll-behavior:none;font-family:'Poppins',sans-serif !important;}
       #root{width:100%;height:100%;height:100dvh;display:flex;flex-direction:column;overflow:hidden;}
       @keyframes pulse-ring{0%{transform:scale(.9);opacity:.7}50%{transform:scale(1.12);opacity:.15}100%{transform:scale(.9);opacity:.7}}
       @keyframes ping{0%{transform:scale(1);opacity:1}80%,100%{transform:scale(2.4);opacity:0}}
