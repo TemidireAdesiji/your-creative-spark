@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { PoseLandmarker, FilesetResolver } from "@mediapipe/tasks-vision";
+import { PoseLandmarker, HandLandmarker, FilesetResolver } from "@mediapipe/tasks-vision";
 import { useHandDetection } from "@/hooks/useHandDetection";
 import {
   GAME_WIDTH,
@@ -358,6 +358,11 @@ const GameScreen=({addXP,initialPhase,onPhaseApplied}:{addXP:(n:number)=>void;in
   const animFrameRef=useRef<number>(0);
   const lastVideoTimeRef=useRef<number>(-1);
   const streamRef=useRef<MediaStream|null>(null);
+  const handVideoRef=useRef<HTMLVideoElement>(null);
+  const handCanvasRef=useRef<HTMLCanvasElement>(null);
+  const handLandmarkerRef=useRef<HandLandmarker|null>(null);
+  const handAnimFrameRef=useRef<number>(0);
+  const lastHandVideoTimeRef=useRef<number>(-1);
   const [phase,setPhase]=useState(() => {
     if (initialPhase === "walkquest-ready" || initialPhase === "handfist-ready") {
       return initialPhase;
@@ -372,7 +377,9 @@ const GameScreen=({addXP,initialPhase,onPhaseApplied}:{addXP:(n:number)=>void;in
   const [cd,setCd]=useState<number|null>(null);
   const [cdColor,setCdColor]=useState(C.gaitAccent);
   const [poseReady,setPoseReady]=useState(false);
+  const [handReady,setHandReady]=useState(false);
   const [liveMetrics,setLiveMetrics]=useState({stride:"--",symmetry:"--",cadence:"--"});
+  const [handMetrics,setHandMetrics]=useState({fingers:"--",spread:"--",status:"--"});
   const [romMetrics,setRomMetrics]=useState({sway:"--",stability:"--",status:"Move into frame",standingStill:false});
   const rombergPrevRef=useRef<Array<{x:number;y:number;visibility?:number}>|null>(null);
   const rombergSamplesRef=useRef<number[]>([]);
@@ -605,8 +612,147 @@ const GameScreen=({addXP,initialPhase,onPhaseApplied}:{addXP:(n:number)=>void;in
         poseLandmarkerRef.current.close();
         poseLandmarkerRef.current = null;
       }
+      if (handLandmarkerRef.current) {
+        handLandmarkerRef.current.close();
+        handLandmarkerRef.current = null;
+      }
     };
   }, []);
+
+  // ── Hand Landmarker ──
+  const HAND_CONNECTIONS = [
+    [0,1],[1,2],[2,3],[3,4],       // thumb
+    [0,5],[5,6],[6,7],[7,8],       // index
+    [0,9],[9,10],[10,11],[11,12],   // middle
+    [0,13],[13,14],[14,15],[15,16], // ring
+    [0,17],[17,18],[18,19],[19,20], // pinky
+    [5,9],[9,13],[13,17],           // palm
+  ];
+
+  const initHandLandmarker = useCallback(async () => {
+    try {
+      const vision = await FilesetResolver.forVisionTasks(
+        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
+      );
+      const hl = await HandLandmarker.createFromOptions(vision, {
+        baseOptions: {
+          modelAssetPath: "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",
+          delegate: "GPU"
+        },
+        runningMode: "VIDEO",
+        numHands: 2,
+      });
+      handLandmarkerRef.current = hl;
+      setHandReady(true);
+    } catch (e) {
+      console.error("HandLandmarker GPU failed, trying CPU:", e);
+      try {
+        const vision = await FilesetResolver.forVisionTasks(
+          "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
+        );
+        const hl = await HandLandmarker.createFromOptions(vision, {
+          baseOptions: {
+            modelAssetPath: "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",
+            delegate: "CPU"
+          },
+          runningMode: "VIDEO",
+          numHands: 2,
+        });
+        handLandmarkerRef.current = hl;
+        setHandReady(true);
+      } catch (e2) {
+        console.error("HandLandmarker CPU also failed:", e2);
+      }
+    }
+  }, []);
+
+  const detectHands = useCallback(() => {
+    const video = handVideoRef.current;
+    const canvas = handCanvasRef.current;
+    const hl = handLandmarkerRef.current;
+    if (!video || !canvas || !hl || video.readyState < 2) {
+      handAnimFrameRef.current = requestAnimationFrame(detectHands);
+      return;
+    }
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
+
+    if (video.currentTime !== lastHandVideoTimeRef.current) {
+      lastHandVideoTimeRef.current = video.currentTime;
+      const result = hl.detectForVideo(video, performance.now());
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (result.landmarks && result.landmarks.length > 0) {
+        const w = canvas.width, h = canvas.height;
+        for (const lm of result.landmarks) {
+          // Draw connections
+          for (const [a, b] of HAND_CONNECTIONS) {
+            if (lm[a] && lm[b]) {
+              ctx.beginPath();
+              ctx.moveTo(lm[a].x * w, lm[a].y * h);
+              ctx.lineTo(lm[b].x * w, lm[b].y * h);
+              ctx.strokeStyle = C.handAccent;
+              ctx.lineWidth = 3;
+              ctx.lineCap = "round";
+              ctx.stroke();
+            }
+          }
+          // Draw landmarks
+          for (let i = 0; i < lm.length; i++) {
+            ctx.beginPath();
+            ctx.arc(lm[i].x * w, lm[i].y * h, i === 0 ? 6 : 4, 0, 2 * Math.PI);
+            ctx.fillStyle = [4,8,12,16,20].includes(i) ? C.handAccent : "#fff";
+            ctx.fill();
+            ctx.strokeStyle = C.handAccent;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+          }
+        }
+
+        // Compute hand metrics from first hand
+        const lm = result.landmarks[0];
+        // Count extended fingers
+        const tips = [4, 8, 12, 16, 20];
+        const pips = [3, 6, 10, 14, 18];
+        let extended = 0;
+        // Thumb: tip.x vs pip.x (lateral)
+        if (Math.abs(lm[4].x - lm[2].x) > Math.abs(lm[3].x - lm[2].x)) extended++;
+        // Other fingers: tip.y < pip.y (above)
+        for (let f = 1; f < 5; f++) {
+          if (lm[tips[f]].y < lm[pips[f]].y) extended++;
+        }
+        // Spread: distance between index tip and pinky tip
+        const spread = Math.sqrt(Math.pow(lm[8].x - lm[20].x, 2) + Math.pow(lm[8].y - lm[20].y, 2));
+        const spreadPct = Math.min(100, Math.round(spread * 300));
+        setHandMetrics({
+          fingers: `${extended}/5`,
+          spread: `${spreadPct}%`,
+          status: result.landmarks.length === 2 ? "2 Hands" : "1 Hand",
+        });
+      } else {
+        setHandMetrics({ fingers: "--", spread: "--", status: "No Hand" });
+      }
+    }
+    handAnimFrameRef.current = requestAnimationFrame(detectHands);
+  }, []);
+
+  // Start/stop hand detection
+  useEffect(() => {
+    if (phase === "handtrack" && handReady) {
+      handAnimFrameRef.current = requestAnimationFrame(detectHands);
+    }
+    return () => { if (handAnimFrameRef.current) cancelAnimationFrame(handAnimFrameRef.current); };
+  }, [phase, handReady, detectHands]);
+
+  // Attach stream to hand video when phase changes
+  useEffect(() => {
+    if (phase === "handtrack" && handVideoRef.current && streamRef.current && !handVideoRef.current.srcObject) {
+      handVideoRef.current.srcObject = streamRef.current;
+      handVideoRef.current.play().catch(() => {});
+    }
+  }, [phase]);
 
   const openCam=async(gid:string,accent:string)=>{
     setCdColor(accent); setCd(3);
@@ -617,6 +763,7 @@ const GameScreen=({addXP,initialPhase,onPhaseApplied}:{addXP:(n:number)=>void;in
       if(videoRef.current){videoRef.current.srcObject=s;videoRef.current.play();}
       // Init MediaPipe for pose-based challenges
       if((gid==="gaitcam" || gid==="romberg") && !poseLandmarkerRef.current) await initPoseLandmarker();
+      if(gid==="handtrack" && !handLandmarkerRef.current) await initHandLandmarker();
     }catch(e){console.error("Camera error:",e);}
     let c=3;const iv=setInterval(()=>{c--;if(c===0){clearInterval(iv);setCd(null);setPhase(gid);}else setCd(c);},1000);
   };
@@ -626,6 +773,10 @@ const GameScreen=({addXP,initialPhase,onPhaseApplied}:{addXP:(n:number)=>void;in
     if(videoRef.current && streamRef.current && !videoRef.current.srcObject){
       videoRef.current.srcObject=streamRef.current;
       videoRef.current.play().catch(()=>{});
+    }
+    if(phase==="handtrack" && handVideoRef.current && streamRef.current && !handVideoRef.current.srcObject){
+      handVideoRef.current.srcObject=streamRef.current;
+      handVideoRef.current.play().catch(()=>{});
     }
   }, [phase]);
 
@@ -687,12 +838,14 @@ const GameScreen=({addXP,initialPhase,onPhaseApplied}:{addXP:(n:number)=>void;in
       videoRef.current.srcObject = null;
     }
     setPhase("choose");setScore(null);setPct(0);setWalkTime(120);setWalkActive(false);setWalkDone(false);setRomPhase("ready");setRomTime(30);setRomScores({});setSteps(0);setPoseReady(false);setLiveMetrics({stride:"--",symmetry:"--",cadence:"--"});setRomMetrics({sway:"--",stability:"--",status:"Move into frame",standingStill:false});
-    setFlappyGamePhase("menu");setFlappyScore(0);
+    setFlappyGamePhase("menu");setFlappyScore(0);setHandReady(false);setHandMetrics({fingers:"--",spread:"--",status:"--"});
     rombergPrevRef.current=null;
     rombergSamplesRef.current=[];
     clearInterval(walkRef.current);clearInterval(beatRef.current);
     if(flappyAnimRef.current) cancelAnimationFrame(flappyAnimRef.current);
+    if(handAnimFrameRef.current) cancelAnimationFrame(handAnimFrameRef.current);
     if(poseLandmarkerRef.current){poseLandmarkerRef.current.close();poseLandmarkerRef.current=null;}
+    if(handLandmarkerRef.current){handLandmarkerRef.current.close();handLandmarkerRef.current=null;}
   };
 
   const initFlappyGame = useCallback(() => {
@@ -868,6 +1021,7 @@ const GameScreen=({addXP,initialPhase,onPhaseApplied}:{addXP:(n:number)=>void;in
           <GameCard game={{label:"Romberg Challenge",sub:"Eyes open → closed balance test · 30s each",std:"Romberg",bg:`linear-gradient(135deg,${C.romBg},#3b1f5e)`,icon:<Icon name="balance" size={20} color="#fff"/>}} onClick={()=>openCam("romberg",C.romAccent)}/>
           <GameCard game={{label:"GaitCam",sub:"Walk toward camera · real-time pose landmarks",std:"TUG-adapted",bg:`linear-gradient(135deg,${C.gaitBg},#1a3f3c)`,icon:<Icon name="skeleton" size={20} color="#fff"/>}} onClick={()=>openCam("gaitcam",C.gaitAccent)}/>
           <GameCard game={{label:"Fist Open / Close",sub:"Flappy Hand · fist = up, open hand = down",std:"Hand",bg:`linear-gradient(135deg,${C.handBg},#244824)`,icon:<Icon name="hand" size={20} color="#fff"/>}} onClick={()=>setPhase("handfist-ready")}/>
+          <GameCard game={{label:"Hand Track",sub:"Real-time 21-point hand skeleton · dexterity",std:"Hand-LM",bg:`linear-gradient(135deg,#1A1400,#3d2e00)`,icon:<Icon name="hand" size={20} color="#fff"/>}} onClick={()=>openCam("handtrack",C.handAccent)}/>
           <div style={{background:C.bg2,borderRadius:18,padding:"14px",marginTop:4}}>
             <p style={{margin:"0 0 10px",fontSize:12,fontWeight:600,color:C.black,fontFamily:"DM Sans,sans-serif"}}>Clinical standards used</p>
             {[
@@ -875,6 +1029,7 @@ const GameScreen=({addXP,initialPhase,onPhaseApplied}:{addXP:(n:number)=>void;in
               {icon:<Icon name="balance" size={13} color={C.romAccent}/>, text:"Romberg Challenge: Romberg sign test — standard neurological balance assessment"},
               {icon:<Icon name="skeleton" size={13} color={C.gaitAccent}/>,text:"GaitCam: MediaPipe Pose landmarks — real-time pediatric gait pattern capture"},
               {icon:<Icon name="hand"     size={13} color={C.handAccent}/>, text:"Fist Open/Close: Flappy Hand — fist = fly up, open hand = fly down (MediaPipe Hands)"},
+              {icon:<Icon name="hand"     size={13} color={C.handAccent}/>, text:"Hand Track: MediaPipe Hand Landmarker — 21-point hand skeleton for dexterity assessment"},
             ].map((r,i)=>(
               <div key={i} style={{display:"flex",gap:10,alignItems:"flex-start",marginBottom:i<3?8:0}}>
                 <div style={{width:26,height:26,borderRadius:8,background:"#fff",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{r.icon}</div>
@@ -1196,6 +1351,64 @@ const GameScreen=({addXP,initialPhase,onPhaseApplied}:{addXP:(n:number)=>void;in
               <p style={{color:"rgba(255,255,255,.3)",fontSize:11,margin:0,fontFamily:"DM Sans,sans-serif"}}>MediaPipe Pose · {Math.floor(pct)}%</p>
             </div>
           </CamHUD>
+        </div>
+      )}
+
+      {/* ══ HAND TRACK ACTIVE ══ */}
+      {phase==="handtrack"&&(
+        <div style={{padding:"0 20px"}}>
+          <CamHUD accent={C.handAccent} label={handReady?"HAND TRACK · MEDIAPIPE LIVE":"HAND TRACK · LOADING MODEL..."} recording={handReady}
+            metrics={[{l:"Fingers",v:handMetrics.fingers,hi:handMetrics.fingers!=="--"},{l:"Spread",v:handMetrics.spread},{l:"Detected",v:handMetrics.status,hi:handMetrics.status!=="No Hand"}]}>
+            <div style={{position:"absolute",inset:0}}>
+              <video ref={handVideoRef} autoPlay muted playsInline style={{width:"100%",height:"100%",objectFit:"cover",position:"absolute",inset:0,transform:"scaleX(-1)"}}/>
+              <canvas ref={handCanvasRef} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",pointerEvents:"none",transform:"scaleX(-1)"}}/>
+              {!handReady&&(
+                <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:10}}>
+                  <div style={{width:36,height:36,borderRadius:"50%",border:`3px solid rgba(232,163,23,.25)`,borderTopColor:C.handAccent,animation:"spin 1s linear infinite"}}/>
+                  <p style={{color:C.handAccent,fontSize:10,letterSpacing:2,margin:0,fontFamily:"DM Sans,sans-serif"}}>LOADING HAND LANDMARKER...</p>
+                </div>
+              )}
+              {handReady&&(
+                <div style={{position:"absolute",bottom:50,left:0,right:0,display:"flex",justifyContent:"center"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:5,background:"rgba(0,0,0,.5)",borderRadius:100,padding:"4px 12px"}}>
+                    <Icon name="hand" size={12} color={C.handAccent}/>
+                    <span style={{fontSize:9,color:C.handAccent,letterSpacing:1.5,fontFamily:"DM Sans,sans-serif",fontWeight:700}}>SHOW YOUR HANDS</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </CamHUD>
+          <div style={{marginTop:10,display:"flex",gap:8}}>
+            <div style={{flex:1,background:C.handAccentLight,borderRadius:14,padding:"11px 14px",display:"flex",gap:8,alignItems:"center"}}>
+              <Icon name="hand" size={14} color={C.handAccent}/>
+              <p style={{margin:0,fontSize:11,color:"#5a3e00",fontFamily:"DM Sans,sans-serif"}}>Hold hands in front of the camera · open & close fists</p>
+            </div>
+          </div>
+          <div style={{marginTop:10}}>
+            <Btn label="Analyze Dexterity" onClick={()=>analyze("handtrack")} variant="black"/>
+          </div>
+        </div>
+      )}
+
+      {/* Hand Track done */}
+      {phase==="handtrack-done"&&score&&(
+        <div style={{padding:"0 20px",animation:"fade-in .4s ease"}}>
+          <div style={{background:`linear-gradient(145deg,${C.handBg},#3d2e00)`,borderRadius:22,padding:"22px",textAlign:"center",marginBottom:12}}>
+            <div style={{width:52,height:52,borderRadius:"50%",background:"rgba(255,255,255,.15)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 10px"}}><Icon name="hand" size={22} color="#fff"/></div>
+            <p style={{margin:"0 0 3px",fontSize:10,color:"rgba(255,255,255,.55)",letterSpacing:2,fontFamily:"DM Sans,sans-serif"}}>HAND TRACK COMPLETE</p>
+            <div style={{fontSize:52,fontWeight:900,fontFamily:"Fraunces,serif",color:"#fff",lineHeight:1,marginBottom:4}}>{score}</div>
+            <p style={{margin:"0 0 12px",fontSize:12,color:"rgba(255,255,255,.6)",fontFamily:"DM Sans,sans-serif"}}>dexterity score</p>
+            <div style={{background:"rgba(255,255,255,.12)",borderRadius:14,padding:"8px 14px",display:"inline-flex",gap:6,alignItems:"center"}}><Icon name="star" size={13} color={C.gold}/><span style={{fontSize:12,fontWeight:700,color:"#fff",fontFamily:"DM Sans,sans-serif"}}>+35 XP earned</span></div>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
+            {[{l:"Finger Extension",v:`${Math.floor(score*.92)}%`},{l:"Grip Strength",v:`${Math.floor(score*.88)}%`},{l:"Hand Spread",v:`${Math.floor(score*.95)}%`},{l:"Dexterity Score",v:`${score}/100`,accent:true}].map((m,i)=>(
+              <div key={i} style={{background:m.accent?C.handAccentLight:C.bg2,borderRadius:14,padding:"12px"}}>
+                <p style={{margin:"0 0 4px",fontSize:9,color:C.mid,fontFamily:"DM Sans,sans-serif",textTransform:"uppercase",letterSpacing:.7}}>{m.l}</p>
+                <p style={{margin:0,fontSize:22,fontWeight:900,fontFamily:"Fraunces,serif",color:m.accent?C.handAccent:C.black}}>{m.v}</p>
+              </div>
+            ))}
+          </div>
+          <div style={{display:"flex",gap:10}}><Btn label="Try Again" onClick={reset} variant="outline"/><Btn label="Save" icon={<Icon name="check" size={13} color="#fff"/>} onClick={()=>alert("Saved!")} variant="teal"/></div>
         </div>
       )}
 
