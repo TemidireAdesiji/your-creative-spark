@@ -1079,7 +1079,7 @@ const GameScreen=({addXP,initialPhase,onPhaseApplied}:{addXP:(n:number)=>void;in
         </div>
       )}
 
-      {(phase==="handfist-ready"||phase==="handfist")&&(
+      {(phase==="handfist-ready"||(phase==="handfist"&&flappyGamePhase!=="playing"))&&(
         <video ref={flappyVideoRef} style={{display:"none"}} playsInline muted width={320} height={240} />
       )}
 
@@ -1121,13 +1121,17 @@ const GameScreen=({addXP,initialPhase,onPhaseApplied}:{addXP:(n:number)=>void;in
 
       {/* ══ HAND FIST PLAYING → Flappy Bird game ══ */}
       {phase==="handfist"&&flappyGamePhase==="playing"&&(
-        <div style={{padding:"0 20px"}}>
+        <div style={{padding:"0 20px",position:"relative"}}>
           <canvas
             ref={flappyCanvasRef}
             width={GAME_WIDTH}
             height={GAME_HEIGHT}
             style={{display:"block",width:"min(100%, 88dvh)",height:"min(66dvh, calc((100vw - 40px) * 1.5))",margin:"0 auto",objectFit:"contain",borderRadius:12,boxShadow:"0 8px 32px rgba(0,0,0,0.15)"}}
           />
+          {/* PiP camera circle */}
+          <div style={{position:"absolute",bottom:48,right:28,width:72,height:72,borderRadius:"50%",overflow:"hidden",border:"2.5px solid rgba(255,255,255,.85)",boxShadow:"0 4px 16px rgba(0,0,0,.35)",zIndex:10}}>
+            <video ref={flappyVideoRef} style={{width:"100%",height:"100%",objectFit:"cover",transform:facingMode==="user"?"scaleX(-1)":"none"}} playsInline muted width={320} height={240}/>
+          </div>
           <p style={{margin:"8px 0 0",fontSize:11,color:C.mid,fontFamily:"DM Sans,sans-serif"}}>Fist ↑ · Open hand ↓</p>
           <button onClick={switchCamera} style={{marginTop:6,background:"rgba(0,0,0,.06)",borderRadius:100,padding:"5px 12px",display:"inline-flex",alignItems:"center",gap:4,border:"none",cursor:"pointer"}}>
             <Icon name="switchCam" size={12} color={C.mid}/>
