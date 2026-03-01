@@ -203,9 +203,21 @@ const AddConditionModal=({onClose})=>{
     {id:"dmd",  name:"Duchenne Muscular Dystrophy",  abbr:"DMD",   color:C.red,    bg:C.redLight,    icon:<Icon name="fire"     size={18} color={C.red}/>,    games:"Walk Quest · Romberg · posture"},
     {id:"cp",   name:"Cerebral Palsy",               abbr:"CP",    color:C.gold,   bg:"#FBF4E0",     icon:<Icon name="balance"  size={18} color={C.gold}/>,   games:"GaitCam · Walk Quest · Romberg"},
   ];
+
+  // Lock parent scroll on iOS when modal is open
+  useEffect(()=>{
+    const scrollEl=document.getElementById("sm-scroll-container");
+    if(scrollEl) scrollEl.style.overflow="hidden";
+    document.body.style.overflow="hidden";
+    return ()=>{
+      if(scrollEl) scrollEl.style.overflow="";
+      document.body.style.overflow="";
+    };
+  },[]);
+
   return(
-    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.55)",zIndex:1100,display:"flex",alignItems:"flex-end",overflow:"hidden"}}>
-      <div style={{width:"100%",background:"#fff",borderRadius:"28px 28px 0 0",padding:"0 0 0",animation:"slide-up .35s ease",maxHeight:"85dvh",display:"flex",flexDirection:"column",paddingBottom:"env(safe-area-inset-bottom,0px)"}}>
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.55)",zIndex:1100,display:"flex",alignItems:"flex-end"}} onClick={onClose}>
+      <div onClick={e=>e.stopPropagation()} style={{width:"100%",background:"#fff",borderRadius:"28px 28px 0 0",animation:"slide-up .35s ease",maxHeight:"85dvh",display:"flex",flexDirection:"column",paddingBottom:"env(safe-area-inset-bottom,0px)"}}>
         <div style={{padding:"14px 20px 0",display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0}}>
           <div style={{width:36,height:4,background:C.border,borderRadius:2,margin:"0 auto 0 calc(50% - 18px)"}}/>
           <button onClick={onClose} style={{background:C.bg2,border:"none",borderRadius:"50%",width:30,height:30,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}><Icon name="x" size={14} color={C.mid}/></button>
@@ -214,7 +226,7 @@ const AddConditionModal=({onClose})=>{
           <h2 style={{fontFamily:"Fraunces,serif",fontSize:24,fontWeight:900,color:C.black,margin:"0 0 3px"}}>Add Condition</h2>
           <p style={{margin:0,fontSize:12,color:C.mid,fontFamily:"DM Sans,sans-serif"}}>Select a condition to track · challenges auto-adapt</p>
         </div>
-        <div style={{overflowY:"auto",WebkitOverflowScrolling:"touch",padding:"8px 20px 20px",flex:1,minHeight:0}}>
+        <div style={{overflowY:"scroll",WebkitOverflowScrolling:"touch",overscrollBehavior:"contain",padding:"8px 20px 20px",flex:"1 1 auto",minHeight:0}}>
           {step===0&&conditions.map(c=>(
             <button key={c.id} onClick={()=>setSelected(c.id===selected?null:c.id)} style={{width:"100%",background:"#fff",border:`1.5px solid ${selected===c.id?c.color:C.border}`,borderRadius:18,padding:"12px 14px",marginBottom:8,cursor:"pointer",display:"flex",gap:12,alignItems:"center",textAlign:"left",transition:"all .2s"}}>
               <div style={{width:42,height:42,borderRadius:12,background:c.bg,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{c.icon}</div>
@@ -230,7 +242,7 @@ const AddConditionModal=({onClose})=>{
           ))}
         </div>
         {selected&&(
-          <div style={{padding:"12px 20px 16px",flexShrink:0,borderTop:`1px solid ${C.border}`,background:"#fff"}}>
+          <div style={{padding:"12px 20px 16px",flexShrink:0,borderTop:`1px solid ${C.border}`,background:"#fff",borderRadius:"0 0 0 0"}}>
             <Btn label="Add Condition" variant="teal" onClick={()=>{alert(`${conditions.find(c=>c.id===selected)?.name} added!`);onClose();}} icon={<Icon name="plus" size={14} color="#fff"/>}/>
           </div>
         )}
@@ -1447,6 +1459,62 @@ const GameScreen=({addXP,initialPhase,onPhaseApplied}:{addXP:(n:number)=>void;in
   );
 };
 
+/* ── Flare Alert Modal ──────────────────────────────────────────── */
+const FlareModal=({flare,sendAlert,setShowModal})=>{
+  useEffect(()=>{
+    const scrollEl=document.getElementById("sm-scroll-container");
+    if(scrollEl) scrollEl.style.overflow="hidden";
+    document.body.style.overflow="hidden";
+    return ()=>{
+      if(scrollEl) scrollEl.style.overflow="";
+      document.body.style.overflow="";
+    };
+  },[]);
+  return(
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.55)",zIndex:1100,display:"flex",alignItems:"flex-end"}}>
+      <div style={{width:"100%",background:"#fff",borderRadius:"26px 26px 0 0",padding:"20px 20px",animation:"slide-up .3s ease",maxHeight:"75dvh",display:"flex",flexDirection:"column",overflowY:"scroll",WebkitOverflowScrolling:"touch",overscrollBehavior:"contain",paddingBottom:"calc(env(safe-area-inset-bottom, 0px) + 28px)"}}>
+        <div style={{width:36,height:4,background:C.border,borderRadius:2,margin:"0 auto 16px",flexShrink:0}}/>
+        <div style={{background:flare.bg,border:`1.5px solid ${flare.color}33`,borderRadius:16,padding:"12px 14px",marginBottom:14,display:"flex",gap:12,alignItems:"center",flexShrink:0}}>
+          <div style={{width:44,height:44,borderRadius:12,background:flare.level==="severe"?C.red:C.amber,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><Icon name="warn" size={20} color="#fff"/></div>
+          <div>
+            <p style={{margin:"0 0 2px",fontSize:14,fontWeight:700,color:flare.color,fontFamily:"DM Sans,sans-serif"}}>{flare.label}</p>
+            <p style={{margin:0,fontSize:12,color:C.mid,fontFamily:"DM Sans,sans-serif"}}>Flare Score: <strong style={{color:flare.color}}>{flare.score}/100</strong></p>
+          </div>
+        </div>
+        {flare.level==="severe"&&(
+          <div style={{background:C.redLight,borderRadius:12,padding:"10px 14px",marginBottom:14,display:"flex",gap:8,alignItems:"flex-start",flexShrink:0}}>
+            <Icon name="warn" size={14} color={C.red}/>
+            <p style={{margin:0,fontSize:11,color:C.red,fontFamily:"DM Sans,sans-serif",lineHeight:1.5,fontWeight:500}}>This is a <strong>life-threatening severity level</strong>. Immediate medical contact is required — do not dismiss.</p>
+          </div>
+        )}
+        <p style={{margin:"0 0 14px",fontSize:13,color:C.mid,fontFamily:"DM Sans,sans-serif",flexShrink:0}}>Who would you like to notify?</p>
+        <div style={{display:"flex",flexDirection:"column",gap:9,flexShrink:0}}>
+          {flare.level==="severe"&&(
+            <button onClick={()=>sendAlert("clinician")} style={{padding:"16px",borderRadius:100,background:C.red,border:"none",color:"#fff",fontSize:14,fontWeight:700,fontFamily:"DM Sans,sans-serif",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,boxShadow:`0 4px 20px ${C.red}44`,minHeight:54}}>
+              <Icon name="phone" size={16} color="#fff"/> Alert Clinician + Caregiver
+            </button>
+          )}
+          {flare.level!=="severe"&&(
+            <button onClick={()=>sendAlert("caregiver")} style={{padding:"14px",borderRadius:100,background:C.amber,border:"none",color:"#fff",fontSize:13,fontWeight:700,fontFamily:"DM Sans,sans-serif",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,minHeight:50}}>
+              <Icon name="phone" size={15} color="#fff"/> Notify Caregiver
+            </button>
+          )}
+          {flare.level!=="severe"&&(
+            <button onClick={()=>setShowModal(false)} style={{padding:"12px",borderRadius:100,background:"none",border:`1.5px solid ${C.border}`,color:C.mid,fontSize:12,fontWeight:600,fontFamily:"DM Sans,sans-serif",cursor:"pointer"}}>
+              Dismiss — I'll monitor myself
+            </button>
+          )}
+          {flare.level==="severe"&&(
+            <p style={{textAlign:"center",fontSize:11,color:C.red,fontFamily:"DM Sans,sans-serif",display:"flex",alignItems:"center",justifyContent:"center",gap:5,opacity:.7}}>
+              <Icon name="warn" size={11} color={C.red}/> This alert cannot be dismissed for your safety
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 /* ══════════════════════════════════════════════════════════════════
    LOG
 ══════════════════════════════════════════════════════════════════ */
@@ -1478,51 +1546,7 @@ const LogScreen=({addXP})=>{
     <div style={{padding:"0 0 100px",position:"relative"}}>
       {alertToast&&<div style={{position:"fixed",top:72,left:"50%",transform:"translateX(-50%)",zIndex:999,background:alertToast==="clinician"?C.red:C.amber,color:"#fff",fontFamily:"DM Sans,sans-serif",fontWeight:600,fontSize:12,padding:"9px 18px",borderRadius:100,whiteSpace:"nowrap",boxShadow:"0 8px 24px rgba(0,0,0,.2)",animation:"slide-up .35s ease"}}>{alertToast==="clinician"?"Clinician alerted — urgent response triggered":"Caregiver notified via SMS"}</div>}
 
-      {/* Alert modal — NO DISMISS for severe */}
-      {showModal&&(
-        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.55)",zIndex:1100,display:"flex",alignItems:"flex-end",overflow:"hidden"}}>
-          <div style={{width:"100%",background:"#fff",borderRadius:"26px 26px 0 0",padding:"20px 20px 0",animation:"slide-up .3s ease",maxHeight:"80dvh",display:"flex",flexDirection:"column",overflowY:"auto",WebkitOverflowScrolling:"touch",paddingBottom:"calc(env(safe-area-inset-bottom, 0px) + 24px)"}}>
-            <div style={{width:36,height:4,background:C.border,borderRadius:2,margin:"0 auto 16px",flexShrink:0}}/>
-            {/* Severity banner */}
-            <div style={{background:flare.bg,border:`1.5px solid ${flare.color}33`,borderRadius:16,padding:"12px 14px",marginBottom:14,display:"flex",gap:12,alignItems:"center"}}>
-              <div style={{width:44,height:44,borderRadius:12,background:flare.level==="severe"?C.red:C.amber,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><Icon name="warn" size={20} color="#fff"/></div>
-              <div>
-                <p style={{margin:"0 0 2px",fontSize:14,fontWeight:700,color:flare.color,fontFamily:"DM Sans,sans-serif"}}>{flare.label}</p>
-                <p style={{margin:0,fontSize:12,color:C.mid,fontFamily:"DM Sans,sans-serif"}}>Flare Score: <strong style={{color:flare.color}}>{flare.score}/100</strong></p>
-              </div>
-            </div>
-            {flare.level==="severe"&&(
-              <div style={{background:C.redLight,borderRadius:12,padding:"10px 14px",marginBottom:14,display:"flex",gap:8,alignItems:"flex-start",flexShrink:0}}>
-                <Icon name="warn" size={14} color={C.red}/>
-                <p style={{margin:0,fontSize:11,color:C.red,fontFamily:"DM Sans,sans-serif",lineHeight:1.5,fontWeight:500}}>This is a <strong>life-threatening severity level</strong>. Immediate medical contact is required — do not dismiss.</p>
-              </div>
-            )}
-            <p style={{margin:"0 0 14px",fontSize:13,color:C.mid,fontFamily:"DM Sans,sans-serif",flexShrink:0}}>Who would you like to notify?</p>
-            <div style={{display:"flex",flexDirection:"column",gap:9,paddingBottom:24,flexShrink:0}}>
-              {flare.level==="severe"&&(
-                <button onClick={()=>sendAlert("clinician")} style={{padding:"16px",borderRadius:100,background:C.red,border:"none",color:"#fff",fontSize:14,fontWeight:700,fontFamily:"DM Sans,sans-serif",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,boxShadow:`0 4px 20px ${C.red}44`,minHeight:54}}>
-                  <Icon name="phone" size={16} color="#fff"/> Alert Clinician + Caregiver
-                </button>
-              )}
-              {flare.level!=="severe"&&(
-                <button onClick={()=>sendAlert("caregiver")} style={{padding:"14px",borderRadius:100,background:C.amber,border:"none",color:"#fff",fontSize:13,fontWeight:700,fontFamily:"DM Sans,sans-serif",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,minHeight:50}}>
-                  <Icon name="phone" size={15} color="#fff"/> Notify Caregiver
-                </button>
-              )}
-              {flare.level!=="severe"&&(
-                <button onClick={()=>setShowModal(false)} style={{padding:"12px",borderRadius:100,background:"none",border:`1.5px solid ${C.border}`,color:C.mid,fontSize:12,fontWeight:600,fontFamily:"DM Sans,sans-serif",cursor:"pointer"}}>
-                  Dismiss — I'll monitor myself
-                </button>
-              )}
-              {flare.level==="severe"&&(
-                <p style={{textAlign:"center",fontSize:11,color:C.red,fontFamily:"DM Sans,sans-serif",display:"flex",alignItems:"center",justifyContent:"center",gap:5,opacity:.7}}>
-                  <Icon name="warn" size={11} color={C.red}/> This alert cannot be dismissed for your safety
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      {showModal&&<FlareModal flare={flare} sendAlert={sendAlert} setShowModal={setShowModal}/>}
 
       <div style={{padding:"20px 22px 12px"}}>
         <h1 style={{fontFamily:"Fraunces,serif",fontSize:30,fontWeight:900,color:C.black,margin:"0 0 3px",lineHeight:1.05}}>Daily Log</h1>
@@ -1670,7 +1694,7 @@ export default function App(){
     <div style={{width:"100%",height:"100dvh",background:C.bg,display:"flex",flexDirection:"column",fontFamily:"DM Sans,sans-serif",position:"relative",overflow:"hidden",opacity:mounted?1:0,transition:"opacity .3s"}}>
       <GlobalStyles/>
       {xpPop.show&&<div style={{position:"fixed",top:"12%",left:"50%",transform:"translateX(-50%)",zIndex:9999,background:C.gold,color:"#fff",fontFamily:"Fraunces,serif",fontWeight:900,fontSize:20,padding:"9px 22px",borderRadius:100,animation:"bounce-in .4s cubic-bezier(.34,1.56,.64,1)",boxShadow:"0 8px 32px rgba(200,154,46,.45)",display:"flex",alignItems:"center",gap:6,pointerEvents:"none"}}><Icon name="star" size={16} color="#fff"/> +{xpPop.val} XP</div>}
-      <div style={{flex:1,overflowY:"auto",overflowX:"hidden",WebkitOverflowScrolling:"touch",height:0}}>
+      <div id="sm-scroll-container" style={{flex:1,overflowY:"auto",overflowX:"hidden",WebkitOverflowScrolling:"touch",height:0}}>
         {tab==="home"    &&<HomeScreen setTab={setTab} openGameChallenge={openGameChallenge} xp={xp} streak={streak}/>}
         {tab==="game"    &&<GameScreen addXP={addXP} initialPhase={gameInitialPhase} onPhaseApplied={()=>setGameInitialPhase(null)}/>}
         {tab==="log"     &&<LogScreen  addXP={addXP}/>}
