@@ -204,14 +204,11 @@ const AddConditionModal=({onClose})=>{
     {id:"cp",   name:"Cerebral Palsy",               abbr:"CP",    color:C.gold,   bg:"#FBF4E0",     icon:<Icon name="balance"  size={18} color={C.gold}/>,   games:"GaitCam · Walk Quest · Romberg"},
   ];
 
-  // Lock parent scroll on iOS when modal is open
   useEffect(()=>{
     const scrollEl=document.getElementById("sm-scroll-container");
-    if(scrollEl) scrollEl.style.overflow="hidden";
-    document.body.style.overflow="hidden";
+    if(scrollEl) scrollEl.style.overflowY="hidden";
     return ()=>{
-      if(scrollEl) scrollEl.style.overflow="";
-      document.body.style.overflow="";
+      if(scrollEl) scrollEl.style.overflowY="auto";
     };
   },[]);
 
@@ -1463,11 +1460,9 @@ const GameScreen=({addXP,initialPhase,onPhaseApplied}:{addXP:(n:number)=>void;in
 const FlareModal=({flare,sendAlert,setShowModal})=>{
   useEffect(()=>{
     const scrollEl=document.getElementById("sm-scroll-container");
-    if(scrollEl) scrollEl.style.overflow="hidden";
-    document.body.style.overflow="hidden";
+    if(scrollEl) scrollEl.style.overflowY="hidden";
     return ()=>{
-      if(scrollEl) scrollEl.style.overflow="";
-      document.body.style.overflow="";
+      if(scrollEl) scrollEl.style.overflowY="auto";
     };
   },[]);
   return(
