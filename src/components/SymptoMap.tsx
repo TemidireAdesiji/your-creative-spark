@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { PoseLandmarker, FilesetResolver, DrawingUtils } from "@mediapipe/tasks-vision";
 
 const C = {
   bg:"#FFFFFF", bg2:"#F7F7F5", bg3:"#EEECEA",
@@ -322,12 +323,18 @@ const HomeScreen=({setTab,xp,streak})=>{
    GAME SCREEN — all 3 games use camera-first HUD
 ══════════════════════════════════════════════════════════════════ */
 const GameScreen=({addXP})=>{
-  const videoRef=useRef(null);
+  const videoRef=useRef<HTMLVideoElement>(null);
+  const canvasRef=useRef<HTMLCanvasElement>(null);
+  const poseLandmarkerRef=useRef<PoseLandmarker|null>(null);
+  const animFrameRef=useRef<number>(0);
+  const lastVideoTimeRef=useRef<number>(-1);
   const [phase,setPhase]=useState("choose");
   const [pct,setPct]=useState(0);
-  const [score,setScore]=useState(null);
-  const [cd,setCd]=useState(null);
+  const [score,setScore]=useState<number|null>(null);
+  const [cd,setCd]=useState<number|null>(null);
   const [cdColor,setCdColor]=useState(C.gaitAccent);
+  const [poseReady,setPoseReady]=useState(false);
+  const [liveMetrics,setLiveMetrics]=useState({stride:"--",symmetry:"--",cadence:"--"});
 
   // Walk Quest
   const [walkTime,setWalkTime]=useState(120);
@@ -335,30 +342,173 @@ const GameScreen=({addXP})=>{
   const [walkDone,setWalkDone]=useState(false);
   const [beat,setBeat]=useState(false);
   const [steps,setSteps]=useState(0);
-  const walkRef=useRef(null),beatRef=useRef(null);
+  const walkRef=useRef<any>(null),beatRef=useRef<any>(null);
 
   // Romberg
-  const [romPhase,setRomPhase]=useState("ready"); // ready|eyes-open|eyes-closed|done
+  const [romPhase,setRomPhase]=useState("ready");
   const [romTime,setRomTime]=useState(30);
-  const [romScores,setRomScores]=useState({});
+  const [romScores,setRomScores]=useState<Record<string,number>>({});
 
+  // Static fallback skeleton (used in done screen)
   const joints=[[50,8],[50,20],[40,30],[60,30],[30,42],[70,42],[50,38],[44,55],[56,55],[44,74],[56,74]];
   const bones=[[0,1],[1,2],[1,3],[2,4],[3,5],[1,6],[6,7],[6,8],[7,9],[8,10]];
 
-  const openCam=async(gid,accent)=>{
+  // MediaPipe Pose connections for drawing
+  const POSE_CONNECTIONS = [
+    [11,12],[11,13],[13,15],[12,14],[14,16], // torso + arms
+    [11,23],[12,24],[23,24],                  // hips
+    [23,25],[25,27],[24,26],[26,28],          // legs
+    [27,29],[27,31],[28,30],[28,32],          // feet
+    [15,17],[15,19],[16,18],[16,20],          // hands
+  ];
+
+  // Init MediaPipe PoseLandmarker
+  const initPoseLandmarker = useCallback(async () => {
+    try {
+      const vision = await FilesetResolver.forVisionTasks(
+        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
+      );
+      const landmarker = await PoseLandmarker.createFromOptions(vision, {
+        baseOptions: {
+          modelAssetPath: "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",
+          delegate: "GPU"
+        },
+        runningMode: "VIDEO",
+        numPoses: 1,
+      });
+      poseLandmarkerRef.current = landmarker;
+      setPoseReady(true);
+    } catch (e) {
+      console.error("MediaPipe init failed:", e);
+      // Fallback to CPU
+      try {
+        const vision = await FilesetResolver.forVisionTasks(
+          "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
+        );
+        const landmarker = await PoseLandmarker.createFromOptions(vision, {
+          baseOptions: {
+            modelAssetPath: "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",
+            delegate: "CPU"
+          },
+          runningMode: "VIDEO",
+          numPoses: 1,
+        });
+        poseLandmarkerRef.current = landmarker;
+        setPoseReady(true);
+      } catch (e2) {
+        console.error("MediaPipe CPU fallback also failed:", e2);
+      }
+    }
+  }, []);
+
+  // Pose detection loop
+  const detectPose = useCallback(() => {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    const landmarker = poseLandmarkerRef.current;
+    if (!video || !canvas || !landmarker || video.readyState < 2) {
+      animFrameRef.current = requestAnimationFrame(detectPose);
+      return;
+    }
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
+
+    if (video.currentTime !== lastVideoTimeRef.current) {
+      lastVideoTimeRef.current = video.currentTime;
+      const result = landmarker.detectForVideo(video, performance.now());
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (result.landmarks && result.landmarks.length > 0) {
+        const lm = result.landmarks[0];
+        const w = canvas.width, h = canvas.height;
+
+        // Draw connections
+        for (const [a, b] of POSE_CONNECTIONS) {
+          if (lm[a] && lm[b] && lm[a].visibility > 0.5 && lm[b].visibility > 0.5) {
+            ctx.beginPath();
+            ctx.moveTo(lm[a].x * w, lm[a].y * h);
+            ctx.lineTo(lm[b].x * w, lm[b].y * h);
+            ctx.strokeStyle = C.gaitAccent;
+            ctx.lineWidth = 3;
+            ctx.lineCap = "round";
+            ctx.stroke();
+          }
+        }
+
+        // Draw joints
+        for (let i = 0; i < lm.length; i++) {
+          if (lm[i].visibility > 0.5) {
+            ctx.beginPath();
+            ctx.arc(lm[i].x * w, lm[i].y * h, i < 11 ? 3 : 5, 0, 2 * Math.PI);
+            ctx.fillStyle = "#fff";
+            ctx.fill();
+            ctx.strokeStyle = C.gaitAccent;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+          }
+        }
+
+        // Compute live metrics from landmarks
+        const lHip = lm[23], rHip = lm[24], lAnkle = lm[27], rAnkle = lm[28];
+        if (lHip && rHip && lAnkle && rAnkle) {
+          const hipWidth = Math.abs(lHip.x - rHip.x);
+          const strideEst = Math.round(hipWidth * 200 + 40);
+          const lLeg = Math.abs(lHip.y - lAnkle.y);
+          const rLeg = Math.abs(rHip.y - rAnkle.y);
+          const sym = Math.round((1 - Math.abs(lLeg - rLeg) / Math.max(lLeg, rLeg, 0.01)) * 100);
+          setLiveMetrics({ stride: `~${strideEst}cm`, symmetry: `${sym}%`, cadence: "Live" });
+        }
+      }
+    }
+    animFrameRef.current = requestAnimationFrame(detectPose);
+  }, []);
+
+  // Start/stop pose detection when gaitcam phase is active
+  useEffect(() => {
+    if (phase === "gaitcam" && poseReady) {
+      animFrameRef.current = requestAnimationFrame(detectPose);
+    }
+    return () => { if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current); };
+  }, [phase, poseReady, detectPose]);
+
+  // Cleanup landmarker on unmount
+  useEffect(() => {
+    return () => {
+      if (poseLandmarkerRef.current) {
+        poseLandmarkerRef.current.close();
+        poseLandmarkerRef.current = null;
+      }
+    };
+  }, []);
+
+  const openCam=async(gid:string,accent:string)=>{
     setCdColor(accent); setCd(3);
-    try{const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}});
-      if(videoRef.current){videoRef.current.srcObject=s;videoRef.current.play();}}catch{}
+    try{
+      const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment",width:{ideal:640},height:{ideal:480}}});
+      if(videoRef.current){videoRef.current.srcObject=s;videoRef.current.play();}
+      // Init MediaPipe for gaitcam
+      if(gid==="gaitcam" && !poseLandmarkerRef.current) await initPoseLandmarker();
+    }catch(e){console.error("Camera error:",e);}
     let c=3;const iv=setInterval(()=>{c--;if(c===0){clearInterval(iv);setCd(null);setPhase(gid);}else setCd(c);},1000);
   };
 
-  const analyze=(gid)=>{
-    if(videoRef.current?.srcObject)videoRef.current.srcObject.getTracks().forEach(t=>t.stop());
+  const analyze=(gid:string)=>{
+    cancelAnimationFrame(animFrameRef.current);
+    if(videoRef.current?.srcObject)(videoRef.current.srcObject as MediaStream).getTracks().forEach(t=>t.stop());
     setPct(0);setPhase("analyzing");
     const iv=setInterval(()=>setPct(p=>{if(p>=100){clearInterval(iv);const s=Math.floor(Math.random()*14)+73;setScore(s);setPhase(gid+"-done");addXP(35);return 100;}return p+2;}),60);
   };
 
-  const reset=()=>{setPhase("choose");setScore(null);setPct(0);setWalkTime(120);setWalkActive(false);setWalkDone(false);setRomPhase("ready");setRomTime(30);setRomScores({});setSteps(0);clearInterval(walkRef.current);clearInterval(beatRef.current);};
+  const reset=()=>{
+    cancelAnimationFrame(animFrameRef.current);
+    setPhase("choose");setScore(null);setPct(0);setWalkTime(120);setWalkActive(false);setWalkDone(false);setRomPhase("ready");setRomTime(30);setRomScores({});setSteps(0);setPoseReady(false);setLiveMetrics({stride:"--",symmetry:"--",cadence:"--"});
+    clearInterval(walkRef.current);clearInterval(beatRef.current);
+    if(poseLandmarkerRef.current){poseLandmarkerRef.current.close();poseLandmarkerRef.current=null;}
+  };
   const fmt=s=>`${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`;
 
   // Walk Quest timer
@@ -601,29 +751,34 @@ const GameScreen=({addXP})=>{
       {/* ══ GAITCAM ACTIVE ══ */}
       {phase==="gaitcam"&&(
         <div style={{padding:"0 20px"}}>
-          <CamHUD accent={C.gaitAccent} label="GAITCAM · RECORDING" recording={true}
-            metrics={[{l:"Stride",v:"~72cm"},{l:"Symmetry",v:"Analyzing",hi:false},{l:"Cadence",v:"94spm",hi:true}]}>
+          <CamHUD accent={C.gaitAccent} label={poseReady?"GAITCAM · MEDIAPIPE LIVE":"GAITCAM · LOADING MODEL..."} recording={poseReady}
+            metrics={[{l:"Stride",v:liveMetrics.stride},{l:"Symmetry",v:liveMetrics.symmetry,hi:liveMetrics.symmetry!=="--"},{l:"Tracking",v:poseReady?"Active":"Init...",hi:poseReady}]}>
             <div style={{position:"absolute",inset:0}}>
-              {/* Live video behind */}
-              <video ref={videoRef} autoPlay muted playsInline style={{width:"100%",height:"100%",objectFit:"cover",opacity:.3,position:"absolute",inset:0}}/>
-              {/* Skeleton overlay */}
+              {/* Live video feed */}
+              <video ref={videoRef} autoPlay muted playsInline style={{width:"100%",height:"100%",objectFit:"cover",opacity:.45,position:"absolute",inset:0,transform:"scaleX(-1)"}}/>
+              {/* MediaPipe pose canvas overlay */}
+              <canvas ref={canvasRef} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",pointerEvents:"none",transform:"scaleX(-1)"}}/>
+              {/* Grid guides */}
               <svg style={{position:"absolute",inset:0,pointerEvents:"none"}} width="100%" height="100%" viewBox="0 0 100 100">
                 <line x1="0" y1="87" x2="100" y2="87" stroke={`${C.gaitAccent}44`} strokeWidth=".5" strokeDasharray="3 3"/>
                 <line x1="50" y1="5" x2="50" y2="87" stroke={`${C.gaitAccent}22`} strokeWidth=".5" strokeDasharray="2 4"/>
-                {bones.map(([a,b],i)=><line key={i} x1={joints[a][0]} y1={joints[a][1]} x2={joints[b][0]} y2={joints[b][1]} stroke={C.gaitAccent} strokeWidth="1.5" strokeOpacity=".9"/>)}
-                {joints.map(([x,y],i)=><circle key={i} cx={x} cy={y} r={i===0?2.5:1.8} fill="#fff" stroke={C.gaitAccent} strokeWidth=".8"/>)}
-                {/* Footstep trail */}
-                <circle cx="43" cy="88" r="2.5" fill={C.gaitAccent} opacity=".7"/>
-                <circle cx="57" cy="90" r="2" fill={C.gaitAccent} opacity=".4"/>
-                <circle cx="41" cy="92" r="1.5" fill={C.gaitAccent} opacity=".2"/>
               </svg>
-              {/* Direction arrow */}
-              <div style={{position:"absolute",bottom:50,left:0,right:0,display:"flex",justifyContent:"center"}}>
-                <div style={{display:"flex",alignItems:"center",gap:5,background:"rgba(0,0,0,.5)",borderRadius:100,padding:"4px 12px"}}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={C.gaitAccent} strokeWidth="2.5" strokeLinecap="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
-                  <span style={{fontSize:9,color:C.gaitAccent,letterSpacing:1.5,fontFamily:"DM Sans,sans-serif",fontWeight:700}}>WALK TOWARD CAMERA</span>
+              {/* Loading indicator */}
+              {!poseReady&&(
+                <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:10}}>
+                  <div style={{width:36,height:36,borderRadius:"50%",border:`3px solid rgba(29,163,154,.25)`,borderTopColor:C.gaitAccent,animation:"spin 1s linear infinite"}}/>
+                  <p style={{color:C.gaitAccent,fontSize:10,letterSpacing:2,margin:0,fontFamily:"DM Sans,sans-serif"}}>LOADING MEDIAPIPE...</p>
                 </div>
-              </div>
+              )}
+              {/* Direction arrow */}
+              {poseReady&&(
+                <div style={{position:"absolute",bottom:50,left:0,right:0,display:"flex",justifyContent:"center"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:5,background:"rgba(0,0,0,.5)",borderRadius:100,padding:"4px 12px"}}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={C.gaitAccent} strokeWidth="2.5" strokeLinecap="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+                    <span style={{fontSize:9,color:C.gaitAccent,letterSpacing:1.5,fontFamily:"DM Sans,sans-serif",fontWeight:700}}>WALK TOWARD CAMERA</span>
+                  </div>
+                </div>
+              )}
             </div>
           </CamHUD>
           <div style={{marginTop:10,display:"flex",gap:8}}>
