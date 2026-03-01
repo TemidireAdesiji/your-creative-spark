@@ -151,7 +151,7 @@ const calcFlare=(vals)=>{
 };
 
 /* ── Camera Viewfinder HUD ─────────────────────────────────────── */
-const CamHUD=({accent="#1DA39A",children,label,recording=false,metrics=[]})=>(
+const CamHUD=({accent="#1DA39A",children,label,recording=false,metrics=[],onSwitchCamera=null})=>(
   <div style={{width:"min(100%, 88dvh)",height:"min(66dvh, calc((100vw - 40px) * 0.75))",margin:"0 auto",borderRadius:22,background:"#080e0d",position:"relative",overflow:"hidden"}}>
     {/* Simulated camera grain */}
     <div style={{position:"absolute",inset:0,backgroundImage:"url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E\")",opacity:.4}}/>
@@ -174,9 +174,17 @@ const CamHUD=({accent="#1DA39A",children,label,recording=false,metrics=[]})=>(
         {recording&&<div style={{width:6,height:6,borderRadius:"50%",background:"#ef4444",animation:"rec-blink 1s ease-in-out infinite"}}/>}
         <span style={{fontSize:9,color:"rgba(255,255,255,.85)",letterSpacing:1.5,fontFamily:"DM Sans,sans-serif",fontWeight:600}}>{label}</span>
       </div>
-      <div style={{background:"rgba(0,0,0,.55)",backdropFilter:"blur(4px)",borderRadius:100,padding:"4px 8px",display:"flex",alignItems:"center",gap:4}}>
-        <Icon name="camera" size={10} color={accent}/>
-        <span style={{fontSize:9,color:accent,fontFamily:"DM Sans,sans-serif",fontWeight:600}}>LIVE</span>
+      <div style={{display:"flex",alignItems:"center",gap:6}}>
+        {onSwitchCamera&&(
+          <button onClick={onSwitchCamera} style={{background:"rgba(0,0,0,.55)",backdropFilter:"blur(4px)",borderRadius:100,padding:"5px 8px",display:"flex",alignItems:"center",gap:4,border:"none",cursor:"pointer"}}>
+            <Icon name="switchCam" size={12} color={accent}/>
+            <span style={{fontSize:9,color:accent,fontFamily:"DM Sans,sans-serif",fontWeight:600}}>FLIP</span>
+          </button>
+        )}
+        <div style={{background:"rgba(0,0,0,.55)",backdropFilter:"blur(4px)",borderRadius:100,padding:"4px 8px",display:"flex",alignItems:"center",gap:4}}>
+          <Icon name="camera" size={10} color={accent}/>
+          <span style={{fontSize:9,color:accent,fontFamily:"DM Sans,sans-serif",fontWeight:600}}>LIVE</span>
+        </div>
       </div>
     </div>
     {/* Bottom metrics bar */}
@@ -389,6 +397,7 @@ const GameScreen=({addXP,initialPhase,onPhaseApplied}:{addXP:(n:number)=>void;in
   const [score,setScore]=useState<number|null>(null);
   const [cd,setCd]=useState<number|null>(null);
   const [cdColor,setCdColor]=useState(C.gaitAccent);
+  const [facingMode,setFacingMode]=useState<"user"|"environment">("user");
   const [poseReady,setPoseReady]=useState(false);
   const [handReady,setHandReady]=useState(false);
   const [liveMetrics,setLiveMetrics]=useState({stride:"--",symmetry:"--",cadence:"--"});
@@ -430,7 +439,8 @@ const GameScreen=({addXP,initialPhase,onPhaseApplied}:{addXP:(n:number)=>void;in
 
   const handDetection = useHandDetection(
     flappyVideoRef,
-    phase === "handfist-ready" || (phase === "handfist" && flappyGamePhase === "playing")
+    phase === "handfist-ready" || (phase === "handfist" && flappyGamePhase === "playing"),
+    facingMode
   );
   const { armRaised: flappyFist, openHand: flappyOpenHand, cameraReady: flappyCameraReady, cameraError: flappyCameraError, poseDetected: flappyPoseDetected } = handDetection;
 
@@ -770,15 +780,28 @@ const GameScreen=({addXP,initialPhase,onPhaseApplied}:{addXP:(n:number)=>void;in
   const openCam=async(gid:string,accent:string)=>{
     setCdColor(accent); setCd(3);
     try{
-      const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user",width:{ideal:640},height:{ideal:480}}});
+      const s=await navigator.mediaDevices.getUserMedia({video:{facingMode,width:{ideal:640},height:{ideal:480}}});
       streamRef.current=s;
-      // If video element already exists, attach immediately
       if(videoRef.current){videoRef.current.srcObject=s;videoRef.current.play();}
-      // Init MediaPipe for pose-based challenges
       if((gid==="gaitcam" || gid==="romberg") && !poseLandmarkerRef.current) await initPoseLandmarker();
       if(gid==="handtrack" && !handLandmarkerRef.current) await initHandLandmarker();
     }catch(e){console.error("Camera error:",e);}
     let c=3;const iv=setInterval(()=>{c--;if(c===0){clearInterval(iv);setCd(null);setPhase(gid);}else setCd(c);},1000);
+  };
+
+  const switchCamera=async()=>{
+    const newMode=facingMode==="user"?"environment":"user";
+    setFacingMode(newMode);
+    // Stop existing stream
+    if(streamRef.current){streamRef.current.getTracks().forEach(t=>t.stop());streamRef.current=null;}
+    if(videoRef.current?.srcObject){(videoRef.current.srcObject as MediaStream).getTracks().forEach(t=>t.stop());videoRef.current.srcObject=null;}
+    if(handVideoRef.current?.srcObject){(handVideoRef.current.srcObject as MediaStream).getTracks().forEach(t=>t.stop());handVideoRef.current.srcObject=null;}
+    try{
+      const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:newMode,width:{ideal:640},height:{ideal:480}}});
+      streamRef.current=s;
+      if(videoRef.current){videoRef.current.srcObject=s;videoRef.current.play().catch(()=>{});}
+      if(handVideoRef.current){handVideoRef.current.srcObject=s;handVideoRef.current.play().catch(()=>{});}
+    }catch(e){console.error("Switch camera error:",e);}
   };
 
   // Attach stream to video element whenever it mounts (phase changes)
@@ -1092,6 +1115,10 @@ const GameScreen=({addXP,initialPhase,onPhaseApplied}:{addXP:(n:number)=>void;in
                 <p style={{margin:0,fontSize:13,color:"#4CAF50",fontFamily:"DM Sans,sans-serif"}}>✓ Camera ready · {flappyPoseDetected ? "Hand detected" : "Show your hand"}</p>
               )}
               <p style={{margin:"16px 0 0",fontSize:16,fontWeight:800,color:"#fff",fontFamily:"Fraunces,serif"}}>Make a fist to start!</p>
+              <button onClick={switchCamera} style={{marginTop:12,background:"rgba(0,0,0,.5)",backdropFilter:"blur(4px)",borderRadius:100,padding:"6px 14px",display:"inline-flex",alignItems:"center",gap:5,border:"none",cursor:"pointer"}}>
+                <Icon name="switchCam" size={14} color={FLAPPY_COLORS.bird}/>
+                <span style={{fontSize:11,color:FLAPPY_COLORS.bird,fontFamily:"DM Sans,sans-serif",fontWeight:600}}>Switch Camera</span>
+              </button>
             </div>
           </div>
           <div style={{marginTop:10,background:C.handAccentLight,borderRadius:16,padding:"12px 14px"}}>
@@ -1111,6 +1138,10 @@ const GameScreen=({addXP,initialPhase,onPhaseApplied}:{addXP:(n:number)=>void;in
             style={{display:"block",width:"min(100%, 88dvh)",height:"min(66dvh, calc((100vw - 40px) * 1.5))",margin:"0 auto",objectFit:"contain",borderRadius:12,boxShadow:"0 8px 32px rgba(0,0,0,0.15)"}}
           />
           <p style={{margin:"8px 0 0",fontSize:11,color:C.mid,fontFamily:"DM Sans,sans-serif"}}>Fist ↑ · Open hand ↓</p>
+          <button onClick={switchCamera} style={{marginTop:6,background:"rgba(0,0,0,.06)",borderRadius:100,padding:"5px 12px",display:"inline-flex",alignItems:"center",gap:4,border:"none",cursor:"pointer"}}>
+            <Icon name="switchCam" size={12} color={C.mid}/>
+            <span style={{fontSize:10,color:C.mid,fontFamily:"DM Sans,sans-serif",fontWeight:600}}>Switch Camera</span>
+          </button>
         </div>
       )}
 
@@ -1224,7 +1255,7 @@ const GameScreen=({addXP,initialPhase,onPhaseApplied}:{addXP:(n:number)=>void;in
       {phase==="romberg"&&romPhase!=="done"&&(
         <div style={{padding:"0 20px"}}>
           <CamHUD accent={C.romAccent} label={`ROMBERG · ${romPhase==="ready"?"READY":romPhase==="eyes-open"?"PHASE 1 · EYES OPEN":"PHASE 2 · EYES CLOSED"}`} recording={romPhase!=="ready"}
-            metrics={romPhase!=="ready"?[{l:"Phase",v:romPhase==="eyes-open"?"1/2":"2/2"},{l:"Time",v:romTime+"s",hi:true}]:[]}>
+            metrics={romPhase!=="ready"?[{l:"Phase",v:romPhase==="eyes-open"?"1/2":"2/2"},{l:"Time",v:romTime+"s",hi:true}]:[]} onSwitchCamera={switchCamera}>
             <div style={{position:"absolute",inset:0}}>
               <video ref={videoRef} autoPlay muted playsInline style={{width:"100%",height:"100%",objectFit:"cover",position:"absolute",inset:0,transform:"scaleX(-1)"}}/>
               <canvas ref={canvasRef} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",pointerEvents:"none",transform:"scaleX(-1)"}}/>
@@ -1310,7 +1341,7 @@ const GameScreen=({addXP,initialPhase,onPhaseApplied}:{addXP:(n:number)=>void;in
       {phase==="gaitcam"&&(
         <div style={{padding:"0 20px"}}>
           <CamHUD accent={C.gaitAccent} label={poseReady?"GAITCAM · MEDIAPIPE LIVE":"GAITCAM · LOADING MODEL..."} recording={poseReady}
-            metrics={[{l:"Stride",v:liveMetrics.stride},{l:"Symmetry",v:liveMetrics.symmetry,hi:liveMetrics.symmetry!=="--"},{l:"Tracking",v:poseReady?"Active":"Init...",hi:poseReady}]}>
+            metrics={[{l:"Stride",v:liveMetrics.stride},{l:"Symmetry",v:liveMetrics.symmetry,hi:liveMetrics.symmetry!=="--"},{l:"Tracking",v:poseReady?"Active":"Init...",hi:poseReady}]} onSwitchCamera={switchCamera}>
             <div style={{position:"absolute",inset:0}}>
               {/* Live video feed */}
               <video ref={videoRef} autoPlay muted playsInline style={{width:"100%",height:"100%",objectFit:"cover",position:"absolute",inset:0,transform:"scaleX(-1)"}}/>
@@ -1371,7 +1402,7 @@ const GameScreen=({addXP,initialPhase,onPhaseApplied}:{addXP:(n:number)=>void;in
       {phase==="handtrack"&&(
         <div style={{padding:"0 20px"}}>
           <CamHUD accent={C.handAccent} label={handReady?"HAND TRACK · MEDIAPIPE LIVE":"HAND TRACK · LOADING MODEL..."} recording={handReady}
-            metrics={[{l:"Fingers",v:handMetrics.fingers,hi:handMetrics.fingers!=="--"},{l:"Spread",v:handMetrics.spread},{l:"Detected",v:handMetrics.status,hi:handMetrics.status!=="No Hand"}]}>
+            metrics={[{l:"Fingers",v:handMetrics.fingers,hi:handMetrics.fingers!=="--"},{l:"Spread",v:handMetrics.spread},{l:"Detected",v:handMetrics.status,hi:handMetrics.status!=="No Hand"}]} onSwitchCamera={switchCamera}>
             <div style={{position:"absolute",inset:0}}>
               <video ref={handVideoRef} autoPlay muted playsInline style={{width:"100%",height:"100%",objectFit:"cover",position:"absolute",inset:0,transform:"scaleX(-1)"}}/>
               <canvas ref={handCanvasRef} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",pointerEvents:"none",transform:"scaleX(-1)"}}/>

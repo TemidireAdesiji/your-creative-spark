@@ -4,7 +4,8 @@ import { HANDS_CDN } from "@/lib/flappyBirdConstants";
 
 export function useHandDetection(
   videoRef: RefObject<HTMLVideoElement | null>,
-  enabled: boolean
+  enabled: boolean,
+  facingMode: "user" | "environment" = "user"
 ) {
   const [armRaised, setArmRaised] = useState(false);
   const [openHand, setOpenHand] = useState(false);
@@ -24,7 +25,7 @@ export function useHandDetection(
     async function init() {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { width: 320, height: 240, facingMode: "user" },
+          video: { width: 320, height: 240, facingMode },
         });
         if (cancelled) {
           stream.getTracks().forEach((t) => t.stop());
@@ -129,7 +130,7 @@ export function useHandDetection(
         stream.getTracks().forEach((t) => t.stop());
       }
     };
-  }, [enabled, videoRef]);
+  }, [enabled, videoRef, facingMode]);
 
   return {
     armRaised,
