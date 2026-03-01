@@ -1,5 +1,29 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { PoseLandmarker, FilesetResolver, DrawingUtils } from "@mediapipe/tasks-vision";
+import { PoseLandmarker, FilesetResolver } from "@mediapipe/tasks-vision";
+import { useHandDetection } from "@/hooks/useHandDetection";
+import {
+  GAME_WIDTH,
+  GAME_HEIGHT,
+  BIRD_SIZE,
+  PIPE_WIDTH,
+  PIPE_GAP,
+  PIPE_SPEED,
+  PIPE_SPAWN_INTERVAL,
+  GROUND_HEIGHT,
+  VERTICAL_SPEED,
+  COLORS as FLAPPY_COLORS,
+} from "@/lib/flappyBirdConstants";
+import {
+  drawSky,
+  drawClouds,
+  drawGround,
+  drawPipe,
+  drawBird,
+  drawScore,
+  checkCollision,
+  type Pipe,
+  type Bird,
+} from "@/lib/flappyBirdDraw";
 
 const C = {
   bg:"#FFFFFF", bg2:"#F7F7F5", bg3:"#EEECEA",
@@ -13,6 +37,7 @@ const C = {
   walkBg:"#0A2540",   walkAccent:"#3B82F6",  walkAccentLight:"#DBEAFE",
   romBg:"#1A0A2E",    romAccent:"#A855F7",   romAccentLight:"#F3E8FF",
   gaitBg:"#0D1E1C",   gaitAccent:"#1DA39A",  gaitAccentLight:"#E8F6F5",
+  handBg:"#1A2E1A",   handAccent:"#22C55E",  handAccentLight:"#DCFCE7",
 };
 
 /* ── Icons ─────────────────────────────────────────────────────── */
@@ -49,6 +74,8 @@ const Icon=({name,size=18,color="currentColor",sw=1.8})=>{
     eye:     <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>,
     eyeoff:  <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></>,
     music:   <><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></>,
+    hand:    <><path d="M12 2v4M9 5v4M15 5v4M12 6v12M8 8v10M16 8v10M12 18l-2 4M12 18l2 4"/></>,
+    fist:    <><ellipse cx="12" cy="14" rx="5" ry="6" fill="none"/><path d="M7 10v1M17 10v1M12 8v2"/></>,
   };
   return <svg {...p}>{d[name]}</svg>;
 };
@@ -75,6 +102,7 @@ const GlobalStyles=()=>{
       @keyframes rec-blink{0%,100%{opacity:1}50%{opacity:.3}}
       @keyframes scan-line{0%{top:10%}100%{top:90%}}
       @keyframes grid-fade{0%,100%{opacity:.06}50%{opacity:.12}}
+      @keyframes fist-open-close{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(0.85);opacity:.9}}
       input[type=range]{height:4px;border-radius:2px;outline:none;border:none;cursor:pointer;}
     `;
     document.head.appendChild(s);
@@ -215,7 +243,7 @@ const AddConditionModal=({onClose})=>{
 /* ══════════════════════════════════════════════════════════════════
    HOME
 ══════════════════════════════════════════════════════════════════ */
-const HomeScreen=({setTab,xp,streak})=>{
+const HomeScreen=({setTab,openGameChallenge,xp,streak})=>{
   const level=Math.floor(xp/200)+1,xpPct=((xp%200)/200)*100;
   const [showAddCondition,setShowAddCondition]=useState(false);
   return(
@@ -266,12 +294,13 @@ const HomeScreen=({setTab,xp,streak})=>{
         </div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
           {[
-            {label:"Walk Quest",       sub:"2-min walk test",        bg:`linear-gradient(145deg,${C.walkBg},#1e3a5f)`,       icon:<Icon name="walk"     size={18} color="#fff"/>, id:"game"},
-            {label:"Romberg Challenge",sub:"Balance & stability",     bg:`linear-gradient(145deg,${C.romBg},#3b1f5e)`,        icon:<Icon name="balance"  size={18} color="#fff"/>, id:"game"},
-            {label:"GaitCam",          sub:"Walk-toward analysis",    bg:`linear-gradient(145deg,${C.gaitBg},#1a3f3c)`,       icon:<Icon name="skeleton" size={18} color="#fff"/>, id:"game"},
+            {label:"Walk Quest",       sub:"2-min walk test",        bg:`linear-gradient(145deg,${C.walkBg},#1e3a5f)`,       icon:<Icon name="walk"     size={18} color="#fff"/>, id:"game", openPhase:"walkquest-ready"},
+            {label:"Romberg Challenge",sub:"Balance & stability",     bg:`linear-gradient(145deg,${C.romBg},#3b1f5e)`,        icon:<Icon name="balance"  size={18} color="#fff"/>, id:"game", openPhase:"romberg"},
+            {label:"GaitCam",          sub:"Walk-toward analysis",    bg:`linear-gradient(145deg,${C.gaitBg},#1a3f3c)`,       icon:<Icon name="skeleton" size={18} color="#fff"/>, id:"game", openPhase:"gaitcam"},
+            {label:"Fist Open / Close",sub:"Flappy Hand · fist up, open down", bg:`linear-gradient(145deg,${C.handBg},#244824)`, icon:<Icon name="hand"     size={18} color="#fff"/>, id:"game", openPhase:"handfist-ready"},
             {label:"Daily Log",        sub:"Symptoms + flare",        bg:"none",                                               icon:<Icon name="log"      size={18} color={C.black}/>, id:"log",light:true},
           ].map((t,i)=>(
-            <button key={i} onClick={()=>setTab(t.id)} style={{background:t.bg,border:t.light?`1.5px solid ${C.border}`:"none",borderRadius:22,padding:"18px 16px",cursor:"pointer",textAlign:"left",position:"relative",overflow:"hidden",minHeight:130}}>
+            <button key={i} onClick={()=>t.openPhase?openGameChallenge(t.openPhase):setTab(t.id)} style={{background:t.bg,border:t.light?`1.5px solid ${C.border}`:"none",borderRadius:22,padding:"18px 16px",cursor:"pointer",textAlign:"left",position:"relative",overflow:"hidden",minHeight:130}}>
               <div style={{position:"absolute",right:-10,bottom:-10,width:70,height:70,borderRadius:"50%",background:t.light?"rgba(0,0,0,.04)":"rgba(255,255,255,.06)"}}/>
               <div style={{width:36,height:36,borderRadius:12,background:t.light?"#fff":t.id==="log"?"#fff":"rgba(255,255,255,.15)",border:t.light?`1px solid ${C.border}`:"none",display:"flex",alignItems:"center",justifyContent:"center",marginBottom:10}}>{t.icon}</div>
               <p style={{margin:"0 0 2px",fontSize:13,fontWeight:700,color:t.light?C.black:"#fff",fontFamily:"DM Sans,sans-serif",lineHeight:1.2}}>{t.label}</p>
@@ -322,7 +351,7 @@ const HomeScreen=({setTab,xp,streak})=>{
 /* ══════════════════════════════════════════════════════════════════
    GAME SCREEN — all 3 games use camera-first HUD
 ══════════════════════════════════════════════════════════════════ */
-const GameScreen=({addXP})=>{
+const GameScreen=({addXP,initialPhase,onPhaseApplied}:{addXP:(n:number)=>void;initialPhase?:string|null;onPhaseApplied?:()=>void})=>{
   const videoRef=useRef<HTMLVideoElement>(null);
   const canvasRef=useRef<HTMLCanvasElement>(null);
   const poseLandmarkerRef=useRef<PoseLandmarker|null>(null);
@@ -349,6 +378,30 @@ const GameScreen=({addXP})=>{
   const [romPhase,setRomPhase]=useState("ready");
   const [romTime,setRomTime]=useState(30);
   const [romScores,setRomScores]=useState<Record<string,number>>({});
+
+  // Hand / Flappy Bird (fist = up, open hand = down)
+  const flappyVideoRef = useRef<HTMLVideoElement>(null);
+  const flappyCanvasRef = useRef<HTMLCanvasElement>(null);
+  const flappyGameStateRef = useRef<{
+    bird: Bird;
+    pipes: Pipe[];
+    groundOffset: number;
+    cloudOffset: number;
+    score: number;
+    lastPipeTime: number;
+    wingAngle: number;
+    started: boolean;
+  } | null>(null);
+  const flappyAnimRef = useRef<number>(0);
+  const [flappyScore, setFlappyScore] = useState(0);
+  const [flappyBestScore, setFlappyBestScore] = useState(0);
+  const [flappyGamePhase, setFlappyGamePhase] = useState<"menu" | "playing" | "gameover">("menu");
+
+  const handDetection = useHandDetection(
+    flappyVideoRef,
+    phase === "handfist-ready" || phase === "handfist"
+  );
+  const { armRaised: flappyFist, openHand: flappyOpenHand, cameraReady: flappyCameraReady, cameraError: flappyCameraError, poseDetected: flappyPoseDetected } = handDetection;
 
   // Static fallback skeleton (used in done screen)
   const joints=[[50,8],[50,20],[40,30],[60,30],[30,42],[70,42],[50,38],[44,55],[56,55],[44,74],[56,74]];
@@ -507,6 +560,25 @@ const GameScreen=({addXP})=>{
     }
   }, [phase]);
 
+  // Apply initial phase when opening a challenge directly from Home
+  useEffect(()=>{
+    if(!initialPhase)return;
+    if(initialPhase==="romberg"){openCam("romberg",C.romAccent);onPhaseApplied?.();return;}
+    if(initialPhase==="gaitcam"){openCam("gaitcam",C.gaitAccent);onPhaseApplied?.();return;}
+    if(initialPhase==="walkquest-ready"||initialPhase==="handfist-ready"){setPhase(initialPhase);onPhaseApplied?.();}
+  },[initialPhase]);
+
+  // Stop all cameras when leaving the challenges screen (unmount)
+  useEffect(()=>{
+    return ()=>{
+      if(streamRef.current){streamRef.current.getTracks().forEach(t=>t.stop());streamRef.current=null;}
+      if(videoRef.current&&videoRef.current.srcObject){(videoRef.current.srcObject as MediaStream).getTracks().forEach(t=>t.stop());videoRef.current.srcObject=null;}
+      if(flappyVideoRef.current&&flappyVideoRef.current.srcObject){(flappyVideoRef.current.srcObject as MediaStream).getTracks().forEach(t=>t.stop());flappyVideoRef.current.srcObject=null;}
+      if(flappyAnimRef.current)cancelAnimationFrame(flappyAnimRef.current);
+      if(poseLandmarkerRef.current){poseLandmarkerRef.current.close();poseLandmarkerRef.current=null;}
+    };
+  },[]);
+
   const analyze=(gid:string)=>{
     cancelAnimationFrame(animFrameRef.current);
     if(streamRef.current){streamRef.current.getTracks().forEach(t=>t.stop());streamRef.current=null;}
@@ -519,9 +591,25 @@ const GameScreen=({addXP})=>{
     cancelAnimationFrame(animFrameRef.current);
     if(streamRef.current){streamRef.current.getTracks().forEach(t=>t.stop());streamRef.current=null;}
     setPhase("choose");setScore(null);setPct(0);setWalkTime(120);setWalkActive(false);setWalkDone(false);setRomPhase("ready");setRomTime(30);setRomScores({});setSteps(0);setPoseReady(false);setLiveMetrics({stride:"--",symmetry:"--",cadence:"--"});
+    setFlappyGamePhase("menu");setFlappyScore(0);
     clearInterval(walkRef.current);clearInterval(beatRef.current);
+    if(flappyAnimRef.current) cancelAnimationFrame(flappyAnimRef.current);
     if(poseLandmarkerRef.current){poseLandmarkerRef.current.close();poseLandmarkerRef.current=null;}
   };
+
+  const initFlappyGame = useCallback(() => {
+    flappyGameStateRef.current = {
+      bird: { x: 80, y: GAME_HEIGHT / 2 - 20, velocity: 0, rotation: 0 },
+      pipes: [],
+      groundOffset: 0,
+      cloudOffset: 0,
+      score: 0,
+      lastPipeTime: Date.now(),
+      wingAngle: 0,
+      started: false,
+    };
+    setFlappyScore(0);
+  }, []);
   const fmt=s=>`${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`;
 
   // Walk Quest timer
@@ -538,6 +626,121 @@ const GameScreen=({addXP})=>{
     const iv=setInterval(()=>{setRomTime(t=>{if(t<=1){clearInterval(iv);const sw=Math.floor(Math.random()*25)+5;setRomScores(prev=>{const next={...prev,[romPhase]:sw};if(romPhase==="eyes-open"){setRomPhase("eyes-closed");setRomTime(30);}else{setRomPhase("done");addXP(35);}return next;});return 30;}return t-1;});},1000);
     return()=>clearInterval(iv);
   },[phase,romPhase]);
+
+  // Flappy Bird game loop (when playing)
+  useEffect(() => {
+    if (phase !== "handfist" || flappyGamePhase !== "playing") return;
+    const canvas = flappyCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    function loop() {
+      const gs = flappyGameStateRef.current;
+      if (!gs) return;
+
+      if (!gs.started && flappyFist) gs.started = true;
+
+      if (gs.started) {
+        if (flappyFist) {
+          gs.bird.y -= VERTICAL_SPEED;
+          gs.bird.velocity = -4;
+        } else if (flappyOpenHand) {
+          gs.bird.y += VERTICAL_SPEED;
+          gs.bird.velocity = 4;
+        } else {
+          gs.bird.velocity = 0;
+        }
+        const maxY = GAME_HEIGHT - GROUND_HEIGHT - BIRD_SIZE;
+        gs.bird.y = Math.max(0, Math.min(maxY, gs.bird.y));
+
+        gs.groundOffset += PIPE_SPEED;
+        gs.cloudOffset += PIPE_SPEED;
+
+        if (Date.now() - gs.lastPipeTime > PIPE_SPAWN_INTERVAL) {
+          const minGap = 80;
+          const maxGap = GAME_HEIGHT - GROUND_HEIGHT - PIPE_GAP - 80;
+          const gapY = Math.random() * (maxGap - minGap) + minGap;
+          gs.pipes.push({ x: GAME_WIDTH, gapY, scored: false });
+          gs.lastPipeTime = Date.now();
+        }
+
+        gs.pipes.forEach((pipe) => {
+          pipe.x -= PIPE_SPEED;
+          if (!pipe.scored && pipe.x + PIPE_WIDTH < gs.bird.x) {
+            pipe.scored = true;
+            gs.score++;
+            setFlappyScore(gs.score);
+          }
+        });
+        gs.pipes = gs.pipes.filter((p) => p.x > -PIPE_WIDTH - 20);
+
+        if (checkCollision(gs.bird, gs.pipes)) {
+          setFlappyBestScore((prev) => Math.max(prev, gs.score));
+          setFlappyGamePhase("gameover");
+          return;
+        }
+      }
+      gs.wingAngle += 0.25;
+
+      drawSky(ctx);
+      drawClouds(ctx, gs.cloudOffset);
+      gs.pipes.forEach((pipe) => drawPipe(ctx, pipe));
+      drawGround(ctx, gs.groundOffset);
+      drawBird(ctx, gs.bird, gs.wingAngle);
+      drawScore(ctx, gs.score);
+
+      if (!gs.started) {
+        ctx.fillStyle = "rgba(0,0,0,0.25)";
+        ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+        ctx.font = "bold 18px 'Trebuchet MS', sans-serif";
+        ctx.fillStyle = FLAPPY_COLORS.text;
+        ctx.textAlign = "center";
+        ctx.fillText("Make a fist to start!", GAME_WIDTH / 2, GAME_HEIGHT / 2 + 60);
+      }
+
+      const gesture = flappyFist ? "FIST ↑" : flappyOpenHand ? "OPEN ↓" : "HOLD";
+      ctx.fillStyle = flappyFist ? "#4CAF50" : flappyOpenHand ? "#2196F3" : "rgba(255,255,255,0.3)";
+      ctx.beginPath();
+      ctx.arc(GAME_WIDTH - 24, 24, 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.font = "11px sans-serif";
+      ctx.fillStyle = "rgba(255,255,255,0.7)";
+      ctx.textAlign = "right";
+      ctx.fillText(gesture, GAME_WIDTH - 38, 28);
+
+      flappyAnimRef.current = requestAnimationFrame(loop);
+    }
+
+    flappyAnimRef.current = requestAnimationFrame(loop);
+    return () => {
+      if (flappyAnimRef.current) cancelAnimationFrame(flappyAnimRef.current);
+    };
+  }, [phase, flappyGamePhase, flappyFist, flappyOpenHand]);
+
+  // Start game when user makes fist on menu or from gameover
+  useEffect(() => {
+    if ((phase !== "handfist-ready" && phase !== "handfist") || !flappyCameraReady || !flappyFist) return;
+    if (phase === "handfist-ready") {
+      setPhase("handfist");
+      initFlappyGame();
+      setFlappyGamePhase("playing");
+    } else if (flappyGamePhase === "gameover") {
+      initFlappyGame();
+      setFlappyGamePhase("playing");
+    }
+  }, [phase, flappyCameraReady, flappyFist, flappyGamePhase, initFlappyGame]);
+
+  // Draw Flappy menu background when on handfist-ready (canvas would otherwise be blank)
+  useEffect(() => {
+    if (phase !== "handfist-ready" || !flappyCanvasRef.current) return;
+    const canvas = flappyCanvasRef.current;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    drawSky(ctx);
+    drawClouds(ctx, 0);
+    drawGround(ctx, 0);
+  }, [phase]);
 
   const GameCard=({game,onClick})=>(
     <button onClick={onClick} style={{width:"100%",background:"#fff",border:`1.5px solid ${C.border}`,borderRadius:20,padding:"14px",marginBottom:10,cursor:"pointer",display:"flex",gap:14,alignItems:"center",textAlign:"left"}}>
@@ -566,14 +769,16 @@ const GameScreen=({addXP})=>{
           <GameCard game={{label:"Walk Quest",sub:"2-min music-guided walk · standardized 2MWT",std:"2MWT",bg:`linear-gradient(135deg,${C.walkBg},#1a3a5c)`,icon:<Icon name="walk" size={20} color="#fff"/>}} onClick={()=>setPhase("walkquest-ready")}/>
           <GameCard game={{label:"Romberg Challenge",sub:"Eyes open → closed balance test · 30s each",std:"Romberg",bg:`linear-gradient(135deg,${C.romBg},#3b1f5e)`,icon:<Icon name="balance" size={20} color="#fff"/>}} onClick={()=>openCam("romberg",C.romAccent)}/>
           <GameCard game={{label:"GaitCam",sub:"Walk toward camera · real-time pose landmarks",std:"TUG-adapted",bg:`linear-gradient(135deg,${C.gaitBg},#1a3f3c)`,icon:<Icon name="skeleton" size={20} color="#fff"/>}} onClick={()=>openCam("gaitcam",C.gaitAccent)}/>
+          <GameCard game={{label:"Fist Open / Close",sub:"Flappy Hand · fist = up, open hand = down",std:"Hand",bg:`linear-gradient(135deg,${C.handBg},#244824)`,icon:<Icon name="hand" size={20} color="#fff"/>}} onClick={()=>setPhase("handfist-ready")}/>
           <div style={{background:C.bg2,borderRadius:18,padding:"14px",marginTop:4}}>
             <p style={{margin:"0 0 10px",fontSize:12,fontWeight:600,color:C.black,fontFamily:"DM Sans,sans-serif"}}>Clinical standards used</p>
             {[
               {icon:<Icon name="walk"    size={13} color={C.walkAccent}/>, text:"Walk Quest: 2-Minute Walk Test (2MWT) — validated for HSP, Pompe, and neuromuscular conditions"},
               {icon:<Icon name="balance" size={13} color={C.romAccent}/>, text:"Romberg Challenge: Romberg sign test — standard neurological balance assessment"},
               {icon:<Icon name="skeleton" size={13} color={C.gaitAccent}/>,text:"GaitCam: MediaPipe Pose landmarks — real-time pediatric gait pattern capture"},
+              {icon:<Icon name="hand"     size={13} color={C.handAccent}/>, text:"Fist Open/Close: Flappy Hand — fist = fly up, open hand = fly down (MediaPipe Hands)"},
             ].map((r,i)=>(
-              <div key={i} style={{display:"flex",gap:10,alignItems:"flex-start",marginBottom:i<2?8:0}}>
+              <div key={i} style={{display:"flex",gap:10,alignItems:"flex-start",marginBottom:i<3?8:0}}>
                 <div style={{width:26,height:26,borderRadius:8,background:"#fff",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{r.icon}</div>
                 <p style={{margin:"4px 0 0",fontSize:11,color:C.mid,fontFamily:"DM Sans,sans-serif",lineHeight:1.5}}>{r.text}</p>
               </div>
@@ -591,6 +796,79 @@ const GameScreen=({addXP})=>{
               <p style={{color:cdColor,fontSize:10,letterSpacing:3,margin:0,fontFamily:"DM Sans,sans-serif"}}>GET INTO POSITION</p>
             </div>
           </CamHUD>
+        </div>
+      )}
+
+      {(phase==="handfist-ready"||phase==="handfist")&&(
+        <video ref={flappyVideoRef} style={{display:"none"}} playsInline muted width={320} height={240} />
+      )}
+
+      {/* ══ HAND FIST READY → Flappy Bird menu ══ */}
+      {phase==="handfist-ready"&&(
+        <div style={{padding:"0 20px"}}>
+          <h2 style={{fontFamily:"Fraunces,serif",fontSize:22,fontWeight:900,color:C.black,margin:"0 0 4px"}}>Flappy Hand</h2>
+          <p style={{margin:0,fontSize:12,color:C.mid,fontFamily:"DM Sans,sans-serif",marginBottom:10}}>Fist = fly up · Open hand = fly down · Earn +35 XP when you save</p>
+          <div style={{position:"relative",borderRadius:12,overflow:"hidden",boxShadow:"0 8px 32px rgba(0,0,0,0.15)"}}>
+            <canvas
+              ref={flappyCanvasRef}
+              width={GAME_WIDTH}
+              height={GAME_HEIGHT}
+              style={{display:"block",width:"100%",maxHeight:"70dvh",objectFit:"contain",background:FLAPPY_COLORS.sky}}
+            />
+            {/* Menu overlay */}
+            <div style={{position:"absolute",inset:0,background:FLAPPY_COLORS.overlay,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:20,textAlign:"center"}}>
+              <p style={{margin:"0 0 6px",fontSize:15,fontWeight:700,color:FLAPPY_COLORS.bird,fontFamily:"DM Sans,sans-serif"}}>Fist = up · Open hand = down</p>
+              {flappyCameraError ? (
+                <p style={{margin:0,fontSize:13,color:"#E74C3C",fontFamily:"DM Sans,sans-serif"}}>⚠ {flappyCameraError}</p>
+              ) : !flappyCameraReady ? (
+                <p style={{margin:0,fontSize:13,color:FLAPPY_COLORS.bird,fontFamily:"DM Sans,sans-serif"}}>Starting camera…</p>
+              ) : (
+                <p style={{margin:0,fontSize:13,color:"#4CAF50",fontFamily:"DM Sans,sans-serif"}}>✓ Camera ready · {flappyPoseDetected ? "Hand detected" : "Show your hand"}</p>
+              )}
+              <p style={{margin:"16px 0 0",fontSize:16,fontWeight:800,color:"#fff",fontFamily:"Fraunces,serif"}}>Make a fist to start!</p>
+            </div>
+          </div>
+          <div style={{marginTop:10,background:C.handAccentLight,borderRadius:16,padding:"12px 14px"}}>
+            <p style={{margin:"0 0 6px",fontSize:12,fontWeight:600,color:C.black,fontFamily:"DM Sans,sans-serif"}}>How to play</p>
+            <p style={{margin:0,fontSize:11,color:C.handBg,fontFamily:"DM Sans,sans-serif",lineHeight:1.5}}>Close your fist to make the bird fly up, open your hand to let it fall. Avoid the pipes!</p>
+          </div>
+        </div>
+      )}
+
+      {/* ══ HAND FIST PLAYING → Flappy Bird game ══ */}
+      {phase==="handfist"&&flappyGamePhase==="playing"&&(
+        <div style={{padding:"0 20px"}}>
+          <canvas
+            ref={flappyCanvasRef}
+            width={GAME_WIDTH}
+            height={GAME_HEIGHT}
+            style={{display:"block",width:"100%",maxHeight:"70dvh",objectFit:"contain",borderRadius:12,boxShadow:"0 8px 32px rgba(0,0,0,0.15)"}}
+          />
+          <p style={{margin:"8px 0 0",fontSize:11,color:C.mid,fontFamily:"DM Sans,sans-serif"}}>Fist ↑ · Open hand ↓</p>
+        </div>
+      )}
+
+      {/* ══ HAND FIST GAMEOVER ══ */}
+      {phase==="handfist"&&flappyGamePhase==="gameover"&&(
+        <div style={{padding:"0 20px"}}>
+          <div style={{position:"relative",borderRadius:12,overflow:"hidden",boxShadow:"0 8px 32px rgba(0,0,0,0.15)"}}>
+            <canvas
+              ref={flappyCanvasRef}
+              width={GAME_WIDTH}
+              height={GAME_HEIGHT}
+              style={{display:"block",width:"100%",maxHeight:"70dvh",objectFit:"contain",background:FLAPPY_COLORS.sky}}
+            />
+            <div style={{position:"absolute",inset:0,background:FLAPPY_COLORS.overlay,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:20,textAlign:"center"}}>
+              <p style={{margin:0,fontSize:14,fontWeight:800,color:FLAPPY_COLORS.birdBeak,fontFamily:"DM Sans,sans-serif"}}>GAME OVER</p>
+              <p style={{margin:"8px 0 0",fontSize:20,fontWeight:700,color:"#fff",fontFamily:"DM Sans,sans-serif"}}>Score: {flappyScore}</p>
+              <p style={{margin:"4px 0 0",fontSize:14,color:FLAPPY_COLORS.bird,fontFamily:"DM Sans,sans-serif"}}>Best: {flappyBestScore}</p>
+              <p style={{margin:"16px 0 0",fontSize:13,color:"rgba(255,255,255,0.7)",fontFamily:"DM Sans,sans-serif"}}>Make a fist to retry</p>
+              <div style={{marginTop:16,display:"flex",gap:10,flexWrap:"wrap",justifyContent:"center"}}>
+                <Btn label="Save & exit (+35 XP)" variant="teal" onClick={()=>{addXP(35);setPhase("choose");}} icon={<Icon name="check" size={14} color="#fff"/>}/>
+                <Btn label="Try again" variant="outline" onClick={()=>{initFlappyGame();setFlappyGamePhase("playing");}}/>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -1068,19 +1346,21 @@ const ProgressScreen=({xp,streak})=>{
 ══════════════════════════════════════════════════════════════════ */
 export default function App(){
   const [tab,setTab]=useState("home");
+  const [gameInitialPhase,setGameInitialPhase]=useState<string|null>(null);
   const [mounted,setMounted]=useState(false);
   const [xp,setXP]=useState(990);
   const [streak]=useState(6);
   const [xpPop,setXpPop]=useState({show:false,val:0});
   useEffect(()=>{setTimeout(()=>setMounted(true),100);},[]);
   const addXP=(amt)=>{setXP(p=>p+amt);setXpPop({show:true,val:amt});setTimeout(()=>setXpPop({show:false,val:0}),1600);};
+  const openGameChallenge=(phase:string)=>{setTab("game");setGameInitialPhase(phase);};
   return(
     <div style={{width:"100%",height:"100dvh",background:C.bg,display:"flex",flexDirection:"column",fontFamily:"DM Sans,sans-serif",position:"relative",overflow:"hidden",opacity:mounted?1:0,transition:"opacity .3s"}}>
       <GlobalStyles/>
       {xpPop.show&&<div style={{position:"fixed",top:"12%",left:"50%",transform:"translateX(-50%)",zIndex:9999,background:C.gold,color:"#fff",fontFamily:"Fraunces,serif",fontWeight:900,fontSize:20,padding:"9px 22px",borderRadius:100,animation:"bounce-in .4s cubic-bezier(.34,1.56,.64,1)",boxShadow:"0 8px 32px rgba(200,154,46,.45)",display:"flex",alignItems:"center",gap:6,pointerEvents:"none"}}><Icon name="star" size={16} color="#fff"/> +{xpPop.val} XP</div>}
       <div style={{flex:1,overflowY:"auto",overflowX:"hidden",WebkitOverflowScrolling:"touch",height:0}}>
-        {tab==="home"    &&<HomeScreen setTab={setTab} xp={xp} streak={streak}/>}
-        {tab==="game"    &&<GameScreen addXP={addXP}/>}
+        {tab==="home"    &&<HomeScreen setTab={setTab} openGameChallenge={openGameChallenge} xp={xp} streak={streak}/>}
+        {tab==="game"    &&<GameScreen addXP={addXP} initialPhase={gameInitialPhase} onPhaseApplied={()=>setGameInitialPhase(null)}/>}
         {tab==="log"     &&<LogScreen  addXP={addXP}/>}
         {tab==="progress"&&<ProgressScreen xp={xp} streak={streak}/>}
       </div>
