@@ -1688,6 +1688,7 @@ export default function App(){
   const [streak]=useState(6);
   const [xpPop,setXpPop]=useState({show:false,val:0});
   useEffect(()=>{setTimeout(()=>setMounted(true),100);},[]);
+  useEffect(()=>{document.body.style.overflow="";const s=document.getElementById("sm-scroll-container");if(s)s.style.overflow="";},[tab]);
   const addXP=(amt)=>{setXP(p=>p+amt);setXpPop({show:true,val:amt});setTimeout(()=>setXpPop({show:false,val:0}),1600);};
   const openGameChallenge=(phase:string)=>{setTab("game");setGameInitialPhase(phase);};
   return(
