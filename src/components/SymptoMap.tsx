@@ -151,6 +151,34 @@ const calcFlare=(vals)=>{
   return         {score:s,level:"low",     color:C.teal, bg:C.tealLight, label:"Low Risk",           who:null};
 };
 
+/* ── PiP Camera Circle ─────────────────────────────────────────── */
+const PiPCircle=({videoRef,facingMode}:{videoRef:React.RefObject<HTMLVideoElement|null>;facingMode:string})=>{
+  const canvasRef=useRef<HTMLCanvasElement>(null);
+  useEffect(()=>{
+    let raf:number;
+    const draw=()=>{
+      const v=videoRef.current,c=canvasRef.current;
+      if(v&&c&&v.readyState>=2){
+        const ctx=c.getContext("2d");
+        if(ctx){
+          ctx.save();
+          if(facingMode==="user"){ctx.translate(c.width,0);ctx.scale(-1,1);}
+          ctx.drawImage(v,0,0,c.width,c.height);
+          ctx.restore();
+        }
+      }
+      raf=requestAnimationFrame(draw);
+    };
+    draw();
+    return ()=>cancelAnimationFrame(raf);
+  },[videoRef,facingMode]);
+  return(
+    <div style={{position:"absolute",bottom:48,right:28,width:72,height:72,borderRadius:"50%",overflow:"hidden",border:"2.5px solid rgba(255,255,255,.85)",boxShadow:"0 4px 16px rgba(0,0,0,.35)",zIndex:10}}>
+      <canvas ref={canvasRef} width={160} height={120} style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+    </div>
+  );
+};
+
 /* ── Camera Viewfinder HUD ─────────────────────────────────────── */
 const CamHUD=({accent="#1DA39A",children,label,recording=false,metrics=[],onSwitchCamera=null})=>(
   <div style={{width:"min(100%, 88dvh)",height:"min(66dvh, calc((100vw - 40px) * 0.75))",margin:"0 auto",borderRadius:22,background:"#080e0d",position:"relative",overflow:"hidden"}}>
@@ -1079,8 +1107,9 @@ const GameScreen=({addXP,initialPhase,onPhaseApplied}:{addXP:(n:number)=>void;in
         </div>
       )}
 
-      {(phase==="handfist-ready"||(phase==="handfist"&&flappyGamePhase!=="playing"))&&(
-        <video ref={flappyVideoRef} style={{display:"none"}} playsInline muted width={320} height={240} />
+      {/* Always-mounted hidden video for hand detection – shown as PiP during play */}
+      {(phase==="handfist-ready"||phase==="handfist")&&(
+        <video ref={flappyVideoRef} style={{position:"fixed",top:-9999,left:-9999,width:1,height:1,opacity:0,pointerEvents:"none"}} playsInline muted width={320} height={240} />
       )}
 
       {/* ══ HAND FIST READY → Flappy Bird menu ══ */}
@@ -1128,10 +1157,8 @@ const GameScreen=({addXP,initialPhase,onPhaseApplied}:{addXP:(n:number)=>void;in
             height={GAME_HEIGHT}
             style={{display:"block",width:"min(100%, 88dvh)",height:"min(66dvh, calc((100vw - 40px) * 1.5))",margin:"0 auto",objectFit:"contain",borderRadius:12,boxShadow:"0 8px 32px rgba(0,0,0,0.15)"}}
           />
-          {/* PiP camera circle */}
-          <div style={{position:"absolute",bottom:48,right:28,width:72,height:72,borderRadius:"50%",overflow:"hidden",border:"2.5px solid rgba(255,255,255,.85)",boxShadow:"0 4px 16px rgba(0,0,0,.35)",zIndex:10}}>
-            <video ref={flappyVideoRef} style={{width:"100%",height:"100%",objectFit:"cover",transform:facingMode==="user"?"scaleX(-1)":"none"}} playsInline muted width={320} height={240}/>
-          </div>
+          {/* PiP camera circle – mirrors the always-mounted video */}
+          <PiPCircle videoRef={flappyVideoRef} facingMode={facingMode} />
           <p style={{margin:"8px 0 0",fontSize:11,color:C.mid,fontFamily:"DM Sans,sans-serif"}}>Fist ↑ · Open hand ↓</p>
           <button onClick={switchCamera} style={{marginTop:6,background:"rgba(0,0,0,.06)",borderRadius:100,padding:"5px 12px",display:"inline-flex",alignItems:"center",gap:4,border:"none",cursor:"pointer"}}>
             <Icon name="switchCam" size={12} color={C.mid}/>
