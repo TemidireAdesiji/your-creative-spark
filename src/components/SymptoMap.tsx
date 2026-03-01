@@ -76,6 +76,7 @@ const Icon=({name,size=18,color="currentColor",sw=1.8})=>{
     music:   <><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></>,
     hand:    <><path d="M12 2v4M9 5v4M15 5v4M12 6v12M8 8v10M16 8v10M12 18l-2 4M12 18l2 4"/></>,
     fist:    <><ellipse cx="12" cy="14" rx="5" ry="6" fill="none"/><path d="M7 10v1M17 10v1M12 8v2"/></>,
+    switchCam:<><path d="M20 7h-4l2-3"/><path d="M4 17h4l-2 3"/><path d="M20 7a9 9 0 0 1-1.46 10.46"/><path d="M4 17A9 9 0 0 1 5.46 6.54"/></>,
   };
   return <svg {...p}>{d[name]}</svg>;
 };
