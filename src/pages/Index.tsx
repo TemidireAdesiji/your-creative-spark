@@ -1,5 +1,5 @@
-import SymptoMap from "@/components/SymptoMap";
+import Landing from "./Landing";
 
-const Index = () => <SymptoMap />;
+const Index = () => <Landing />;
 
 export default Index;
