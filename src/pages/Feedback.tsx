@@ -1,15 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-
-const TEAL = "#1DA39A";
-const DARK = "#0E0E0E";
 
 const StarRating = ({ rating, setRating }: { rating: number; setRating: (r: number) => void }) => (
   <div className="flex gap-1">
@@ -25,8 +17,8 @@ const StarRating = ({ rating, setRating }: { rating: number; setRating: (r: numb
           width="32"
           height="32"
           viewBox="0 0 24 24"
-          fill={star <= rating ? TEAL : "none"}
-          stroke={star <= rating ? TEAL : "#C4C4C4"}
+          fill={star <= rating ? "hsl(var(--primary))" : "none"}
+          stroke={star <= rating ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))"}
           strokeWidth="1.8"
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -78,44 +70,31 @@ export default function Feedback() {
   };
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: `linear-gradient(160deg, ${DARK} 0%, #0a2e2b 50%, ${TEAL} 100%)`,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: 16,
-        fontFamily: "'Poppins', sans-serif",
-      }}
-    >
-      <div
-        style={{
-          width: "100%",
-          maxWidth: 440,
-          background: "rgba(255,255,255,0.97)",
-          borderRadius: 16,
-          padding: "36px 32px",
-          boxShadow: `0 8px 40px rgba(0,0,0,0.25), 0 0 60px ${TEAL}22`,
-        }}
-      >
-        <div style={{ textAlign: "center", marginBottom: 8 }}>
+    <div className="min-h-screen bg-background flex items-center justify-center p-4 font-poppins">
+      {/* Background glow */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-accent/5 rounded-full blur-3xl" />
+      </div>
+
+      <div className="relative z-10 w-full max-w-md glass-strong rounded-2xl p-8">
+        <div className="text-center mb-6">
           <img
             src="/images/app-logo.png"
             alt="Motion.ly"
-            style={{ width: 48, height: 48, borderRadius: 12, margin: "0 auto 12px" }}
+            className="w-12 h-12 rounded-xl mx-auto mb-3 pulse-glow"
           />
-          <h1 style={{ fontSize: "1.5rem", fontWeight: 700, color: DARK, margin: "0 0 4px", fontFamily: "'Poppins', sans-serif" }}>
+          <h1 className="text-xl font-bold text-foreground mb-1">
             Share Your Feedback
           </h1>
-          <p style={{ fontSize: "0.9rem", color: "#666", margin: 0, fontFamily: "'Poppins', sans-serif" }}>
+          <p className="text-sm text-muted-foreground">
             Help us improve your experience
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 20, marginTop: 24 }}>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
           <div>
-            <label style={{ fontSize: "0.85rem", fontWeight: 600, color: DARK, display: "block", marginBottom: 6, fontFamily: "'Poppins', sans-serif" }}>
+            <label className="text-sm font-semibold text-foreground block mb-1.5">
               Your Name
             </label>
             <input
@@ -124,100 +103,52 @@ export default function Feedback() {
               onChange={(e) => setUserName(e.target.value)}
               maxLength={100}
               required
-              style={{
-                width: "100%",
-                padding: "10px 14px",
-                borderRadius: 8,
-                border: "1.5px solid #e0e0e0",
-                fontSize: "0.95rem",
-                fontFamily: "'Poppins', sans-serif",
-                outline: "none",
-                transition: "border-color 0.2s",
-                boxSizing: "border-box",
-              }}
-              onFocus={(e) => (e.currentTarget.style.borderColor = TEAL)}
-              onBlur={(e) => (e.currentTarget.style.borderColor = "#e0e0e0")}
+              className="w-full px-3.5 py-2.5 rounded-lg bg-secondary border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-shadow"
             />
           </div>
 
           <div>
-            <label style={{ fontSize: "0.85rem", fontWeight: 600, color: DARK, display: "block", marginBottom: 6, fontFamily: "'Poppins', sans-serif" }}>
+            <label className="text-sm font-semibold text-foreground block mb-1.5">
               Rating
             </label>
             <StarRating rating={rating} setRating={setRating} />
           </div>
 
           <div>
-            <label style={{ fontSize: "0.85rem", fontWeight: 600, color: DARK, display: "block", marginBottom: 6, fontFamily: "'Poppins', sans-serif" }}>
+            <label className="text-sm font-semibold text-foreground block mb-1.5">
               Comments (optional)
             </label>
             <textarea
-              placeholder="Tell us what you think…"
+              placeholder="Tell us what you think..."
               value={comments}
               onChange={(e) => setComments(e.target.value)}
               maxLength={1000}
               rows={4}
-              style={{
-                width: "100%",
-                padding: "10px 14px",
-                borderRadius: 8,
-                border: "1.5px solid #e0e0e0",
-                fontSize: "0.95rem",
-                fontFamily: "'Poppins', sans-serif",
-                outline: "none",
-                resize: "vertical",
-                transition: "border-color 0.2s",
-                boxSizing: "border-box",
-              }}
-              onFocus={(e) => (e.currentTarget.style.borderColor = TEAL)}
-              onBlur={(e) => (e.currentTarget.style.borderColor = "#e0e0e0")}
+              className="w-full px-3.5 py-2.5 rounded-lg bg-secondary border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-shadow resize-y"
             />
           </div>
 
-          <div style={{ display: "flex", gap: 12 }}>
+          <div className="flex gap-3">
             <button
               type="submit"
               disabled={submitting}
-              style={{
-                flex: 1,
-                background: TEAL,
-                color: "#fff",
-                fontWeight: 600,
-                fontSize: "0.95rem",
-                padding: "12px 24px",
-                borderRadius: 8,
-                border: "none",
-                cursor: submitting ? "not-allowed" : "pointer",
-                opacity: submitting ? 0.7 : 1,
-                fontFamily: "'Poppins', sans-serif",
-                transition: "opacity 0.2s",
-              }}
+              className="flex-1 px-6 py-3 rounded-lg bg-primary text-primary-foreground font-semibold text-sm disabled:opacity-60 disabled:cursor-not-allowed hover:scale-[1.02] transition-transform"
+              style={{ boxShadow: "var(--shadow-cta)" }}
             >
-              {submitting ? "Submitting…" : "Submit Feedback"}
+              {submitting ? "Submitting..." : "Submit Feedback"}
             </button>
             <button
               type="button"
               onClick={() => navigate("/")}
-              style={{
-                background: "none",
-                border: `1.5px solid ${TEAL}`,
-                color: TEAL,
-                fontWeight: 600,
-                fontSize: "0.95rem",
-                padding: "12px 24px",
-                borderRadius: 8,
-                cursor: "pointer",
-                fontFamily: "'Poppins', sans-serif",
-                transition: "all 0.2s",
-              }}
+              className="px-6 py-3 rounded-lg glass border border-primary/30 text-primary font-semibold text-sm bg-transparent cursor-pointer hover:bg-secondary transition-colors"
             >
               Back
             </button>
           </div>
         </form>
 
-        <div style={{ textAlign: "center", marginTop: 24, fontSize: "0.8rem", color: "#999", fontFamily: "'Poppins', sans-serif" }}>
-          <a href="mailto:admin@motionlyai.com" style={{ color: TEAL, textDecoration: "none" }}>
+        <div className="text-center mt-6">
+          <a href="mailto:admin@motionlyai.com" className="text-xs text-primary no-underline hover:underline">
             admin@motionlyai.com
           </a>
         </div>
