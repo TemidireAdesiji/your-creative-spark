@@ -64,7 +64,7 @@ export default function Navbar() {
         >
           <img
             src="/images/app-logo.png"
-            alt="MotionLy"
+            alt="Motion.ly"
             style={{ width: 34, height: 34, borderRadius: 8 }}
           />
           <span

@@ -65,7 +65,7 @@ const Hero = () => {
       <div style={{ maxWidth: 760 }}>
         <img
           src="/images/app-logo.png"
-          alt="MotionLy logo"
+          alt="Motion.ly logo"
           style={{
             width: 80, height: 80, borderRadius: 18,
             marginBottom: 32, marginLeft: "auto", marginRight: "auto", display: "block",
@@ -252,7 +252,7 @@ const Ethics = () => (
       <ShieldAlert size={28} color={AMBER} style={{ flexShrink: 0, marginTop: 2 }} />
       <div style={{ fontFamily: FONT, fontSize: "0.92rem", color: "#555", lineHeight: 1.7 }}>
         <strong style={{ color: DARK }}>Ethics &amp; disclaimer</strong><br />
-        MotionLy is <strong>not</strong> a medical device and is not approved for
+        Motion.ly is <strong>not</strong> a medical device and is not approved for
         diagnosis. Any clinical use must follow ethics / IRB approval and local
         regulations (e.g.&nbsp;HIPAA, GDPR).
       </div>
@@ -278,7 +278,7 @@ const FinalCta = () => {
           transition: "all 0.6s ease",
         }}
       >
-        Ready to explore MotionLy?
+        Ready to explore Motion.ly?
       </h2>
       <div style={{ display: "flex", gap: 16, justifyContent: "center", flexWrap: "wrap",
         opacity: visible ? 1 : 0, transition: "all 0.6s ease 0.2s" }}>
@@ -309,6 +309,29 @@ const FinalCta = () => {
   );
 };
 
+/* ================================================================ FOOTER ================================================================ */
+const Footer = () => (
+  <footer
+    style={{
+      background: DARK,
+      borderTop: "1px solid rgba(255,255,255,0.08)",
+      padding: "40px 24px",
+      textAlign: "center",
+      fontFamily: FONT,
+    }}
+  >
+    <p style={{ fontSize: "0.9rem", color: "rgba(255,255,255,0.5)", margin: "0 0 8px" }}>
+      Contact us:{" "}
+      <a href="mailto:admin@motionlyai.com" style={{ color: TEAL, textDecoration: "none", fontWeight: 600 }}>
+        admin@motionlyai.com
+      </a>
+    </p>
+    <p style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.3)", margin: 0 }}>
+      © {new Date().getFullYear()} Motion.ly — All rights reserved.
+    </p>
+  </footer>
+);
+
 /* ================================================================ PAGE ================================================================ */
 const Landing = () => (
   <div style={{ fontFamily: FONT, overflowX: "hidden" }}>
@@ -320,6 +343,7 @@ const Landing = () => (
     <WhatYoullSee />
     <Ethics />
     <FinalCta />
+    <Footer />
   </div>
 );
 
