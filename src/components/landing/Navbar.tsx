@@ -81,12 +81,8 @@ export default function Navbar() {
 
         {/* Desktop links */}
         <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 28,
-          }}
-          className="hidden md:flex"
+          className="hidden md:flex items-center"
+          style={{ gap: 28 }}
         >
           {links.map((l) => (
             <button
@@ -101,6 +97,7 @@ export default function Navbar() {
                 cursor: "pointer",
                 transition: "color 0.2s",
                 fontFamily: "'Poppins', sans-serif",
+                whiteSpace: "nowrap",
               }}
               onMouseEnter={(e) => (e.currentTarget.style.color = "#fff")}
               onMouseLeave={(e) =>
@@ -111,6 +108,23 @@ export default function Navbar() {
             </button>
           ))}
           <Link
+            to="/feedback"
+            style={{
+              background: "none",
+              border: `1px solid ${TEAL}`,
+              color: TEAL,
+              fontWeight: 600,
+              fontSize: "0.85rem",
+              padding: "7px 18px",
+              borderRadius: 8,
+              textDecoration: "none",
+              whiteSpace: "nowrap",
+              transition: "all 0.2s",
+            }}
+          >
+            Feedback
+          </Link>
+          <Link
             to="/app"
             style={{
               background: TEAL,
@@ -120,6 +134,7 @@ export default function Navbar() {
               padding: "8px 22px",
               borderRadius: 8,
               textDecoration: "none",
+              whiteSpace: "nowrap",
               transition: "transform 0.15s",
             }}
           >
@@ -167,6 +182,23 @@ export default function Navbar() {
               {l.label}
             </button>
           ))}
+          <Link
+            to="/feedback"
+            onClick={() => setOpen(false)}
+            style={{
+              border: `1px solid ${TEAL}`,
+              color: TEAL,
+              fontWeight: 600,
+              fontSize: "0.95rem",
+              padding: "10px 22px",
+              borderRadius: 8,
+              textDecoration: "none",
+              textAlign: "center",
+              background: "none",
+            }}
+          >
+            Share Your Feedback
+          </Link>
           <Link
             to="/app"
             onClick={() => setOpen(false)}

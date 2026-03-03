@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Stethoscope, FlaskConical, Gamepad2, ScanEye, TrendingUp,
   Users, ShieldAlert, ArrowRight, ChevronDown,
@@ -56,7 +56,10 @@ const Hero = () => {
         alignItems: "center",
         justifyContent: "center",
         textAlign: "center",
-        padding: "100px 24px 60px",
+        paddingTop: 96,
+        paddingBottom: 60,
+        paddingLeft: 24,
+        paddingRight: 24,
       }}
     >
       <div style={{ maxWidth: 760 }}>
@@ -277,18 +280,31 @@ const FinalCta = () => {
       >
         Ready to explore MotionLy?
       </h2>
-      <Link
-        to="/app"
-        style={{
-          background: TEAL, color: "#fff", fontFamily: FONT, fontWeight: 600,
-          fontSize: "1.05rem", padding: "14px 40px", borderRadius: 10,
-          textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 8,
-          boxShadow: `0 4px 20px ${TEAL}55`,
-          opacity: visible ? 1 : 0, transition: "all 0.6s ease 0.2s",
-        }}
-      >
-        Open App <ArrowRight size={18} />
-      </Link>
+      <div style={{ display: "flex", gap: 16, justifyContent: "center", flexWrap: "wrap",
+        opacity: visible ? 1 : 0, transition: "all 0.6s ease 0.2s" }}>
+        <Link
+          to="/app"
+          style={{
+            background: TEAL, color: "#fff", fontFamily: FONT, fontWeight: 600,
+            fontSize: "1.05rem", padding: "14px 40px", borderRadius: 10,
+            textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 8,
+            boxShadow: `0 4px 20px ${TEAL}55`,
+          }}
+        >
+          Open App <ArrowRight size={18} />
+        </Link>
+        <Link
+          to="/feedback"
+          style={{
+            background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.3)",
+            color: "#fff", fontFamily: FONT, fontWeight: 600,
+            fontSize: "1.05rem", padding: "14px 36px", borderRadius: 10,
+            textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 8,
+          }}
+        >
+          Share Your Feedback
+        </Link>
+      </div>
     </section>
   );
 };
