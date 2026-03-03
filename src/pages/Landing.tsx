@@ -92,10 +92,63 @@ const Hero = () => {
 
 /* ================================================================ WHO IT'S FOR ================================================================ */
 const personas = [
-  { icon: <Stethoscope size={28} />, title: "Clinicians", desc: "Monitor progression of Parkinson's, ALS, and more with repeatable tasks instead of subjective notes.", color: "text-primary", border: "border-primary/30" },
-  { icon: <FlaskConical size={28} />, title: "Researchers", desc: "Run longitudinal studies with digital tasks and standardized metrics, no expensive lab equipment needed.", color: "text-accent", border: "border-accent/30" },
-  { icon: <Users size={28} />, title: "Patients & Participants", desc: "Play simple games that translate into useful movement and cognitive data, at home or in clinic.", color: "text-primary", border: "border-primary/30" },
+  {
+    icon: <Stethoscope size={28} />,
+    title: "Clinicians",
+    desc: "Monitor progression of Parkinson's, ALS, and more with repeatable tasks instead of subjective notes.",
+    backDesc: "Replace subjective clinical notes with objective, repeatable digital tasks that track motor and cognitive changes over time.",
+    tags: ["Parkinson's", "ALS", "Motor tracking"],
+    color: "text-primary",
+    border: "border-primary/30",
+  },
+  {
+    icon: <FlaskConical size={28} />,
+    title: "Researchers",
+    desc: <>Run longitudinal studies with digital tasks and standardized metrics.<br className="hidden sm:block" /><span className="block mt-1">No expensive lab equipment needed.</span></>,
+    backDesc: "Design and deploy longitudinal studies using standardized digital tasks. Collect consistent, comparable data across sites without specialised hardware.",
+    tags: ["Longitudinal", "Standardised", "Multi-site"],
+    color: "text-accent",
+    border: "border-accent/30",
+  },
+  {
+    icon: <Users size={28} />,
+    title: "Patients & Participants",
+    desc: "Play simple games that translate into useful movement and cognitive data, at home or in clinic.",
+    backDesc: "Engage with fun, accessible games designed for all ability levels. Your gameplay generates meaningful health data for your care team.",
+    tags: ["Accessible", "Home-based", "Gamified"],
+    color: "text-primary",
+    border: "border-primary/30",
+  },
 ];
+
+const FlipCard = ({ persona, index }: { persona: typeof personas[0]; index: number }) => (
+  <ScrollReveal delay={index * 120}>
+    <div className="group h-72 [perspective:1000px]">
+      <div className="relative w-full h-full transition-transform duration-700 [transform-style:preserve-3d] group-hover:[transform:rotateY(180deg)]">
+        {/* Front */}
+        <div className={`absolute inset-0 glass rounded-2xl p-7 border-t-2 ${persona.border} [backface-visibility:hidden] flex flex-col`}>
+          <div className={`mb-4 ${persona.color}`}>{persona.icon}</div>
+          <h3 className="text-lg font-bold text-foreground mb-2">{persona.title}</h3>
+          <p className="text-sm text-muted-foreground leading-relaxed">{persona.desc}</p>
+        </div>
+        {/* Back */}
+        <div className={`absolute inset-0 glass rounded-2xl p-7 border-t-2 ${persona.border} [backface-visibility:hidden] [transform:rotateY(180deg)] flex flex-col justify-between`}>
+          <div>
+            <h3 className="text-lg font-bold gradient-text mb-3">{persona.title}</h3>
+            <p className="text-sm text-muted-foreground leading-relaxed">{persona.backDesc}</p>
+          </div>
+          <div className="flex flex-wrap gap-2 mt-4">
+            {persona.tags.map((tag) => (
+              <span key={tag} className="px-3 py-1 text-xs font-medium rounded-full bg-primary/10 text-primary border border-primary/20">
+                {tag}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  </ScrollReveal>
+);
 
 const WhoItsFor = () => (
   <section id="who-its-for" className="relative py-24 px-6">
@@ -106,13 +159,7 @@ const WhoItsFor = () => (
       </ScrollReveal>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {personas.map((p, i) => (
-          <ScrollReveal key={p.title} delay={i * 120}>
-            <div className={`glass rounded-2xl p-7 hover-lift border-t-2 ${p.border} h-full`}>
-              <div className={`mb-4 ${p.color}`}>{p.icon}</div>
-              <h3 className="text-lg font-bold text-foreground mb-2">{p.title}</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">{p.desc}</p>
-            </div>
-          </ScrollReveal>
+          <FlipCard key={p.title} persona={p} index={i} />
         ))}
       </div>
     </div>
