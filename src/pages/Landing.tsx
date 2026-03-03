@@ -1,132 +1,86 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
 import {
   Stethoscope, FlaskConical, Gamepad2, ScanEye, TrendingUp,
   Users, ShieldAlert, ArrowRight, ChevronDown,
   LayoutDashboard, Monitor, BarChart3,
 } from "lucide-react";
 import Navbar from "@/components/landing/Navbar";
-import RevealSection from "@/components/landing/RevealSection";
-import { useScrollReveal } from "@/components/landing/useScrollReveal";
-
-const TEAL = "#1DA39A";
-const DARK = "#0E0E0E";
-const WARM_GRAY = "#F5F3F0";
-const AMBER = "#E6A817";
-const PURPLE = "#7C5CBF";
-const FONT = "'Poppins', sans-serif";
-
-const scrollTo = (id: string) =>
-  document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
-
-/* ─── Heading ─── */
-const SectionHeading = ({ children }: { children: React.ReactNode }) => (
-  <h2 style={{ fontFamily: FONT, fontSize: "clamp(1.6rem, 3vw, 2.2rem)", fontWeight: 700, color: DARK, marginBottom: 48, textAlign: "center" }}>
-    {children}
-  </h2>
-);
-
-/* ─── Animated card ─── */
-const AnimatedCard = ({ children, delay = 0, style }: { children: React.ReactNode; delay?: number; style?: React.CSSProperties }) => {
-  const { ref, visible } = useScrollReveal(0.15);
-  return (
-    <div
-      ref={ref}
-      style={{
-        opacity: visible ? 1 : 0,
-        transform: visible ? "translateY(0) scale(1)" : "translateY(20px) scale(0.97)",
-        transition: `all 0.5s ease ${delay}ms`,
-        ...style,
-      }}
-    >
-      {children}
-    </div>
-  );
-};
+import { ScrollReveal } from "@/components/landing/ScrollReveal";
+import { ParallaxBackground } from "@/components/landing/ParallaxBackground";
+import { SkillsProgress } from "@/components/landing/SkillsProgress";
 
 /* ================================================================ HERO ================================================================ */
 const Hero = () => {
-  const { ref, visible } = useScrollReveal(0.05);
-  return (
-    <section
-      ref={ref}
-      style={{
-        background: `linear-gradient(160deg, ${DARK} 0%, #0a2e2b 50%, ${TEAL} 100%)`,
-        minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        textAlign: "center",
-        paddingTop: 96,
-        paddingBottom: 60,
-        paddingLeft: 24,
-        paddingRight: 24,
-      }}
-    >
-      <div style={{ maxWidth: 760 }}>
-        <img
-          src="/images/app-logo.png"
-          alt="Motion.ly logo"
-          style={{
-            width: 80, height: 80, borderRadius: 18,
-            marginBottom: 32, marginLeft: "auto", marginRight: "auto", display: "block",
-            boxShadow: `0 0 40px ${TEAL}66`,
-            opacity: visible ? 1 : 0,
-            transform: visible ? "scale(1)" : "scale(0.8)",
-            transition: "all 0.8s cubic-bezier(0.16, 1, 0.3, 1)",
-          }}
-        />
-        <h1
-          style={{
-            fontFamily: FONT, fontSize: "clamp(2rem, 4.5vw, 3.2rem)", fontWeight: 800,
-            lineHeight: 1.15, color: "#fff", marginBottom: 24,
-            opacity: visible ? 1 : 0, transform: visible ? "translateY(0)" : "translateY(24px)",
-            transition: "all 0.8s ease 0.2s",
-          }}
-        >
-          Track neurodegenerative symptoms through research‑grade, gamified tasks.
-        </h1>
-        <p
-          style={{
-            fontFamily: FONT, fontSize: "clamp(1rem, 2vw, 1.15rem)",
-            color: "rgba(255,255,255,0.78)", lineHeight: 1.7,
-            maxWidth: 620, margin: "0 auto 40px",
-            opacity: visible ? 1 : 0, transform: visible ? "translateY(0)" : "translateY(24px)",
-            transition: "all 0.8s ease 0.4s",
-          }}
-        >
-          Motion.ly helps clinicians and researchers measure changes in movement
-          and cognition using AI‑assisted tasks and computer‑vision signals
-          (e.g.&nbsp;MediaPipe pose and hand tracking).
-        </p>
+  const fullText = "Track neurodegenerative symptoms through research‑grade, gamified tasks.";
+  const [typed, setTyped] = useState("");
 
-        <div
-          style={{
-            display: "flex", gap: 16, justifyContent: "center", flexWrap: "wrap",
-            opacity: visible ? 1 : 0, transform: visible ? "translateY(0)" : "translateY(24px)",
-            transition: "all 0.8s ease 0.6s",
-          }}
-        >
-          <Link
-            to="/app"
-            style={{
-              background: TEAL, color: "#fff", fontFamily: FONT, fontWeight: 600,
-              fontSize: "1.05rem", padding: "14px 36px", borderRadius: 10,
-              textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 8,
-              boxShadow: `0 4px 20px ${TEAL}55`, transition: "transform .15s",
-            }}
-          >
-            Launch Demo <ArrowRight size={18} />
-          </Link>
+  useEffect(() => {
+    let i = 0;
+    const timer = setInterval(() => {
+      if (i <= fullText.length) {
+        setTyped(fullText.slice(0, i));
+        i++;
+      } else {
+        clearInterval(timer);
+      }
+    }, 40);
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <section className="relative min-h-screen flex items-center justify-center pt-28 pb-20 px-6">
+      {/* Glow orbs */}
+      <div className="absolute top-1/4 -left-20 w-80 h-80 bg-primary/10 rounded-full blur-3xl animate-float" />
+      <div className="absolute bottom-1/4 -right-20 w-80 h-80 bg-accent/8 rounded-full blur-3xl animate-float" style={{ animationDelay: "1.5s" }} />
+
+      <div className="relative z-10 max-w-3xl text-center">
+        <ScrollReveal>
+          <img
+            src="/images/app-logo.png"
+            alt="Motion.ly logo"
+            className="w-20 h-20 rounded-2xl mx-auto mb-8 pulse-glow"
+          />
+        </ScrollReveal>
+
+        <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight gradient-text mb-6 pb-1">
+          {typed}
+          <span className="animate-blink text-primary">|</span>
+        </h1>
+
+        <ScrollReveal delay={200}>
+          <p className="text-base md:text-lg text-muted-foreground leading-relaxed max-w-2xl mx-auto mb-10">
+            Motion.ly helps clinicians and researchers measure changes in movement
+            and cognition using AI‑assisted tasks and computer‑vision signals
+            (e.g.&nbsp;MediaPipe pose and hand tracking).
+          </p>
+        </ScrollReveal>
+
+        <ScrollReveal delay={400}>
+          <div className="flex flex-wrap gap-4 justify-center">
+            <Link
+              to="/app"
+              className="inline-flex items-center gap-2 px-8 py-4 bg-primary text-primary-foreground rounded-full font-semibold text-base hover:scale-105 transition-transform no-underline glow-primary"
+              style={{ boxShadow: "var(--shadow-cta)" }}
+            >
+              Launch Demo <ArrowRight size={18} />
+            </Link>
+            <button
+              onClick={() => document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" })}
+              className="inline-flex items-center gap-2 px-8 py-4 glass rounded-full font-medium text-base text-foreground bg-transparent border-none cursor-pointer hover:bg-secondary transition-all"
+            >
+              See how it works <ChevronDown size={18} />
+            </button>
+          </div>
+        </ScrollReveal>
+
+        {/* Scroll indicator */}
+        <div className="mt-16">
           <button
-            onClick={() => scrollTo("how-it-works")}
-            style={{
-              background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.2)",
-              color: "#fff", fontFamily: FONT, fontWeight: 500, fontSize: "1.05rem",
-              padding: "14px 32px", borderRadius: 10, cursor: "pointer",
-              display: "inline-flex", alignItems: "center", gap: 8,
-            }}
+            onClick={() => document.getElementById("who-its-for")?.scrollIntoView({ behavior: "smooth" })}
+            className="glass p-3 rounded-full animate-float bg-transparent border-none cursor-pointer inline-flex"
           >
-            See how it works <ChevronDown size={18} />
+            <ChevronDown className="w-5 h-5 text-primary" />
           </button>
         </div>
       </div>
@@ -136,197 +90,200 @@ const Hero = () => {
 
 /* ================================================================ WHO IT'S FOR ================================================================ */
 const personas = [
-  { icon: <Stethoscope size={32} color={TEAL} />, title: "Clinicians", desc: "Monitor progression of Parkinson's, ALS, and more with repeatable tasks instead of subjective notes.", accent: TEAL },
-  { icon: <FlaskConical size={32} color={AMBER} />, title: "Researchers", desc: "Run longitudinal studies with digital tasks and standardized metrics—no expensive lab equipment needed.", accent: AMBER },
-  { icon: <Users size={32} color={PURPLE} />, title: "Patients & Participants", desc: "Play simple games that translate into useful movement and cognitive data—at home or in clinic.", accent: PURPLE },
+  { icon: <Stethoscope size={28} />, title: "Clinicians", desc: "Monitor progression of Parkinson's, ALS, and more with repeatable tasks instead of subjective notes.", color: "text-primary", border: "border-primary/30" },
+  { icon: <FlaskConical size={28} />, title: "Researchers", desc: "Run longitudinal studies with digital tasks and standardized metrics—no expensive lab equipment needed.", color: "text-accent", border: "border-accent/30" },
+  { icon: <Users size={28} />, title: "Patients & Participants", desc: "Play simple games that translate into useful movement and cognitive data—at home or in clinic.", color: "text-purple", border: "border-purple/30" },
 ];
 
 const WhoItsFor = () => (
-  <RevealSection id="who-its-for" bg={WARM_GRAY}>
-    <SectionHeading>Who it's for</SectionHeading>
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 28 }}>
-      {personas.map((p, i) => (
-        <AnimatedCard key={p.title} delay={i * 120} style={{ background: "#fff", borderRadius: 14, padding: "36px 28px", borderTop: `4px solid ${p.accent}`, boxShadow: "0 2px 12px rgba(0,0,0,0.04)" }}>
-          <div style={{ marginBottom: 16 }}>{p.icon}</div>
-          <h3 style={{ fontFamily: FONT, fontWeight: 700, fontSize: "1.15rem", marginBottom: 10, color: DARK }}>{p.title}</h3>
-          <p style={{ fontFamily: FONT, fontSize: "0.95rem", color: "#555", lineHeight: 1.6 }}>{p.desc}</p>
-        </AnimatedCard>
-      ))}
+  <section id="who-its-for" className="relative py-24 px-6">
+    <div className="max-w-5xl mx-auto">
+      <ScrollReveal>
+        <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-center mb-4 gradient-text">Who it's for</h2>
+        <div className="divider-glow max-w-xs mx-auto mb-12" />
+      </ScrollReveal>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {personas.map((p, i) => (
+          <ScrollReveal key={p.title} delay={i * 120}>
+            <div className={`glass rounded-2xl p-7 hover-lift border-t-2 ${p.border} h-full`}>
+              <div className={`mb-4 ${p.color}`}>{p.icon}</div>
+              <h3 className="text-lg font-bold text-foreground mb-2">{p.title}</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">{p.desc}</p>
+            </div>
+          </ScrollReveal>
+        ))}
+      </div>
     </div>
-  </RevealSection>
+    <div className="divider-glow max-w-5xl mx-auto mt-24" />
+  </section>
 );
 
 /* ================================================================ HOW IT WORKS ================================================================ */
 const steps = [
-  { icon: <Gamepad2 size={36} color={TEAL} />, title: "Design tasks", desc: "Create gamified tasks or adapt existing ones using our builder (React + AI assistance)." },
-  { icon: <ScanEye size={36} color={TEAL} />, title: "Capture signals", desc: "While patients perform tasks, we log behaviour (reaction time, accuracy) and—where enabled—MediaPipe‑based movement features (pose, hands, gait)." },
-  { icon: <TrendingUp size={36} color={TEAL} />, title: "Track change over time", desc: "Summaries and trends help you see whether symptoms are stable, improving, or worsening." },
+  { icon: <Gamepad2 size={32} className="text-primary" />, title: "Design tasks", desc: "Create gamified tasks or adapt existing ones using our builder (React + AI assistance)." },
+  { icon: <ScanEye size={32} className="text-primary" />, title: "Capture signals", desc: "While patients perform tasks, we log behaviour (reaction time, accuracy) and—where enabled—MediaPipe‑based movement features (pose, hands, gait)." },
+  { icon: <TrendingUp size={32} className="text-primary" />, title: "Track change over time", desc: "Summaries and trends help you see whether symptoms are stable, improving, or worsening." },
 ];
 
 const HowItWorks = () => (
-  <RevealSection id="how-it-works">
-    <SectionHeading>How it works</SectionHeading>
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 40 }}>
-      {steps.map((s, i) => (
-        <AnimatedCard key={s.title} delay={i * 150}>
-          <div style={{ textAlign: "center" }}>
-            <div style={{ width: 72, height: 72, borderRadius: "50%", background: `${TEAL}14`, display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
-              {s.icon}
+  <section id="how-it-works" className="relative py-24 px-6">
+    <div className="max-w-5xl mx-auto">
+      <ScrollReveal>
+        <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-center mb-4 gradient-text">How it works</h2>
+        <div className="divider-glow max-w-xs mx-auto mb-12" />
+      </ScrollReveal>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        {steps.map((s, i) => (
+          <ScrollReveal key={s.title} delay={i * 150}>
+            <div className="text-center">
+              <div className="w-16 h-16 rounded-full glass inline-flex items-center justify-center mb-5 pulse-glow">
+                {s.icon}
+              </div>
+              <div className="text-xs font-semibold text-primary uppercase tracking-widest mb-2">
+                Step {i + 1}
+              </div>
+              <h3 className="text-base font-bold text-foreground mb-2">{s.title}</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed max-w-xs mx-auto">{s.desc}</p>
             </div>
-            <div style={{ fontFamily: FONT, fontSize: "0.8rem", fontWeight: 600, color: TEAL, marginBottom: 8, letterSpacing: 1, textTransform: "uppercase" }}>
-              Step {i + 1}
-            </div>
-            <h3 style={{ fontFamily: FONT, fontWeight: 700, fontSize: "1.1rem", marginBottom: 10, color: DARK }}>{s.title}</h3>
-            <p style={{ fontFamily: FONT, fontSize: "0.93rem", color: "#555", lineHeight: 1.65, maxWidth: 320, margin: "0 auto" }}>{s.desc}</p>
-          </div>
-        </AnimatedCard>
-      ))}
+          </ScrollReveal>
+        ))}
+      </div>
     </div>
-  </RevealSection>
+    <div className="divider-glow max-w-5xl mx-auto mt-24" />
+  </section>
 );
 
 /* ================================================================ SCIENCE & TECH ================================================================ */
 const SciTech = () => (
-  <RevealSection id="science" bg={WARM_GRAY}>
-    <SectionHeading>Science &amp; Technology</SectionHeading>
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 32 }}>
-      <AnimatedCard delay={0} style={{ background: "#fff", borderRadius: 14, padding: "32px 28px", boxShadow: "0 2px 12px rgba(0,0,0,0.04)" }}>
-        <h3 style={{ fontFamily: FONT, fontWeight: 700, fontSize: "1.1rem", marginBottom: 18, color: DARK }}>Research‑driven design</h3>
-        <ul style={{ listStyle: "none", padding: 0, margin: 0, fontFamily: FONT, fontSize: "0.93rem", color: "#555", lineHeight: 1.7 }}>
-          {[
-            "Grounded in clinical outcome measures (reaction time, error rates, adherence).",
-            "Built to support longitudinal analysis, not one‑off tests.",
-            "Computer vision via MediaPipe: pre‑trained models for pose and hand tracking; we consume landmarks and motion features.",
-          ].map((t) => (
-            <li key={t} style={{ marginBottom: 12, paddingLeft: 20, position: "relative" }}>
-              <span style={{ position: "absolute", left: 0, top: 2, color: TEAL, fontWeight: 700 }}>✓</span>
-              {t}
-            </li>
-          ))}
-        </ul>
-      </AnimatedCard>
-      <AnimatedCard delay={150} style={{ background: "#fff", borderRadius: 14, padding: "32px 28px", boxShadow: "0 2px 12px rgba(0,0,0,0.04)" }}>
-        <h3 style={{ fontFamily: FONT, fontWeight: 700, fontSize: "1.1rem", marginBottom: 18, color: DARK }}>Built with</h3>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-          {["React + TypeScript", "Tailwind CSS", "shadcn‑ui", "Framer Motion", "MediaPipe (Pose & Hands)", "Supabase / Postgres"].map((t) => (
-            <span key={t} style={{ fontFamily: FONT, fontSize: "0.85rem", padding: "6px 14px", borderRadius: 8, background: `${TEAL}0D`, color: DARK, fontWeight: 500 }}>
-              {t}
-            </span>
-          ))}
-        </div>
-      </AnimatedCard>
+  <section id="science" className="relative py-24 px-6">
+    <div className="max-w-5xl mx-auto">
+      <ScrollReveal>
+        <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-center mb-4 gradient-text">Science &amp; Technology</h2>
+        <div className="divider-glow max-w-xs mx-auto mb-12" />
+      </ScrollReveal>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <ScrollReveal delay={0}>
+          <div className="glass rounded-2xl p-7 hover-lift h-full">
+            <h3 className="text-lg font-bold text-foreground mb-5">Research‑driven design</h3>
+            <ul className="space-y-3 text-sm text-muted-foreground leading-relaxed list-none p-0">
+              {[
+                "Grounded in clinical outcome measures (reaction time, error rates, adherence).",
+                "Built to support longitudinal analysis, not one‑off tests.",
+                "Computer vision via MediaPipe: pre‑trained models for pose and hand tracking; we consume landmarks and motion features.",
+              ].map((t) => (
+                <li key={t} className="flex gap-2">
+                  <span className="text-primary font-bold shrink-0">✓</span>
+                  <span>{t}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </ScrollReveal>
+        <ScrollReveal delay={150}>
+          <SkillsProgress />
+        </ScrollReveal>
+      </div>
     </div>
-  </RevealSection>
+    <div className="divider-glow max-w-5xl mx-auto mt-24" />
+  </section>
 );
 
 /* ================================================================ WHAT YOU'LL SEE ================================================================ */
 const tiles = [
-  { icon: <LayoutDashboard size={40} color={TEAL} />, title: "Task Dashboard", caption: "Overview of current protocols and tasks." },
-  { icon: <Monitor size={40} color={TEAL} />, title: "Session UI", caption: "Game‑like UI for patients, tuned for clarity and low cognitive load." },
-  { icon: <BarChart3 size={40} color={TEAL} />, title: "Trend View", caption: "See how symptoms change over time with rich visualisations." },
+  { icon: <LayoutDashboard size={36} className="text-primary" />, title: "Task Dashboard", caption: "Overview of current protocols and tasks." },
+  { icon: <Monitor size={36} className="text-primary" />, title: "Session UI", caption: "Game‑like UI for patients, tuned for clarity and low cognitive load." },
+  { icon: <BarChart3 size={36} className="text-primary" />, title: "Trend View", caption: "See how symptoms change over time with rich visualisations." },
 ];
 
 const WhatYoullSee = () => (
-  <RevealSection id="screenshots">
-    <SectionHeading>What you'll see</SectionHeading>
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 28 }}>
-      {tiles.map((t, i) => (
-        <AnimatedCard key={t.title} delay={i * 120} style={{ borderRadius: 14, overflow: "hidden", border: "1px solid #e5e5e5", background: "#fff" }}>
-          <div style={{ height: 180, background: `linear-gradient(135deg, ${TEAL}12, ${TEAL}06)`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            {t.icon}
-          </div>
-          <div style={{ padding: "20px 24px" }}>
-            <h3 style={{ fontFamily: FONT, fontWeight: 700, fontSize: "1rem", marginBottom: 6, color: DARK }}>{t.title}</h3>
-            <p style={{ fontFamily: FONT, fontSize: "0.9rem", color: "#666", lineHeight: 1.55 }}>{t.caption}</p>
-          </div>
-        </AnimatedCard>
-      ))}
+  <section id="screenshots" className="relative py-24 px-6">
+    <div className="max-w-5xl mx-auto">
+      <ScrollReveal>
+        <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-center mb-4 gradient-text">What you'll see</h2>
+        <div className="divider-glow max-w-xs mx-auto mb-12" />
+      </ScrollReveal>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {tiles.map((t, i) => (
+          <ScrollReveal key={t.title} delay={i * 120}>
+            <div className="glass rounded-2xl overflow-hidden hover-lift">
+              <div className="h-44 flex items-center justify-center bg-primary/5">
+                {t.icon}
+              </div>
+              <div className="p-5">
+                <h3 className="text-base font-bold text-foreground mb-1">{t.title}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">{t.caption}</p>
+              </div>
+            </div>
+          </ScrollReveal>
+        ))}
+      </div>
     </div>
-  </RevealSection>
+    <div className="divider-glow max-w-5xl mx-auto mt-24" />
+  </section>
 );
 
 /* ================================================================ ETHICS ================================================================ */
 const Ethics = () => (
-  <RevealSection bg={WARM_GRAY}>
-    <div style={{ maxWidth: 720, margin: "0 auto", background: "#fff", borderRadius: 14, padding: "32px 28px", border: `1px solid ${AMBER}44`, display: "flex", gap: 16, alignItems: "flex-start" }}>
-      <ShieldAlert size={28} color={AMBER} style={{ flexShrink: 0, marginTop: 2 }} />
-      <div style={{ fontFamily: FONT, fontSize: "0.92rem", color: "#555", lineHeight: 1.7 }}>
-        <strong style={{ color: DARK }}>Ethics &amp; disclaimer</strong><br />
-        Motion.ly is <strong>not</strong> a medical device and is not approved for
-        diagnosis. Any clinical use must follow ethics / IRB approval and local
-        regulations (e.g.&nbsp;HIPAA, GDPR).
-      </div>
+  <section className="relative py-16 px-6">
+    <div className="max-w-3xl mx-auto">
+      <ScrollReveal>
+        <div className="glass rounded-2xl p-7 flex gap-4 items-start border-l-2 border-accent/50">
+          <ShieldAlert size={26} className="text-accent shrink-0 mt-0.5" />
+          <div className="text-sm text-muted-foreground leading-relaxed">
+            <strong className="text-foreground">Ethics &amp; disclaimer</strong><br />
+            Motion.ly is <strong>not</strong> a medical device and is not approved for
+            diagnosis. Any clinical use must follow ethics / IRB approval and local
+            regulations (e.g.&nbsp;HIPAA, GDPR).
+          </div>
+        </div>
+      </ScrollReveal>
     </div>
-  </RevealSection>
+  </section>
 );
 
 /* ================================================================ FINAL CTA ================================================================ */
-const FinalCta = () => {
-  const { ref, visible } = useScrollReveal(0.2);
-  return (
-    <section
-      ref={ref}
-      style={{
-        background: `linear-gradient(160deg, ${DARK} 0%, #0a2e2b 60%, ${TEAL} 100%)`,
-        textAlign: "center", padding: "80px 24px",
-      }}
-    >
-      <h2
-        style={{
-          fontFamily: FONT, fontSize: "clamp(1.6rem, 3vw, 2.4rem)", fontWeight: 700, color: "#fff", marginBottom: 28,
-          opacity: visible ? 1 : 0, transform: visible ? "translateY(0)" : "translateY(20px)",
-          transition: "all 0.6s ease",
-        }}
-      >
-        Ready to explore Motion.ly?
-      </h2>
-      <div style={{ display: "flex", gap: 16, justifyContent: "center", flexWrap: "wrap",
-        opacity: visible ? 1 : 0, transition: "all 0.6s ease 0.2s" }}>
-        <Link
-          to="/app"
-          style={{
-            background: TEAL, color: "#fff", fontFamily: FONT, fontWeight: 600,
-            fontSize: "1.05rem", padding: "14px 40px", borderRadius: 10,
-            textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 8,
-            boxShadow: `0 4px 20px ${TEAL}55`,
-          }}
-        >
-          Open App <ArrowRight size={18} />
-        </Link>
-        <Link
-          to="/feedback"
-          style={{
-            background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.3)",
-            color: "#fff", fontFamily: FONT, fontWeight: 600,
-            fontSize: "1.05rem", padding: "14px 36px", borderRadius: 10,
-            textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 8,
-          }}
-        >
-          Share Your Feedback
-        </Link>
-      </div>
-    </section>
-  );
-};
+const FinalCta = () => (
+  <section className="relative py-24 px-6">
+    {/* Glow orb */}
+    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-primary/8 rounded-full blur-3xl" />
+
+    <div className="relative z-10 text-center">
+      <ScrollReveal>
+        <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-8 gradient-text">
+          Ready to explore Motion.ly?
+        </h2>
+      </ScrollReveal>
+      <ScrollReveal delay={200}>
+        <div className="flex flex-wrap gap-4 justify-center">
+          <Link
+            to="/app"
+            className="inline-flex items-center gap-2 px-8 py-4 bg-primary text-primary-foreground rounded-full font-semibold text-base hover:scale-105 transition-transform no-underline glow-primary"
+            style={{ boxShadow: "var(--shadow-cta)" }}
+          >
+            Open App <ArrowRight size={18} />
+          </Link>
+          <Link
+            to="/feedback"
+            className="inline-flex items-center gap-2 px-8 py-4 glass rounded-full font-semibold text-base text-foreground no-underline hover:bg-secondary transition-all"
+          >
+            Share Your Feedback
+          </Link>
+        </div>
+      </ScrollReveal>
+    </div>
+  </section>
+);
 
 /* ================================================================ FOOTER ================================================================ */
 const Footer = () => (
-  <footer
-    style={{
-      background: DARK,
-      borderTop: "1px solid rgba(255,255,255,0.08)",
-      padding: "40px 24px",
-      textAlign: "center",
-      fontFamily: FONT,
-    }}
-  >
-    <p style={{ fontSize: "0.9rem", color: "rgba(255,255,255,0.5)", margin: "0 0 8px" }}>
+  <footer className="border-t border-border py-10 px-6 text-center">
+    <p className="text-sm text-muted-foreground mb-2">
       Contact us:{" "}
-      <a href="mailto:admin@motionlyai.com" style={{ color: TEAL, textDecoration: "none", fontWeight: 600 }}>
+      <a href="mailto:admin@motionlyai.com" className="text-primary font-semibold no-underline hover:underline">
         admin@motionlyai.com
       </a>
     </p>
-    <p style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.3)", margin: 0 }}>
+    <p className="text-xs text-muted-foreground/50">
       © {new Date().getFullYear()} Motion.ly — All rights reserved.
     </p>
   </footer>
@@ -334,15 +291,18 @@ const Footer = () => (
 
 /* ================================================================ PAGE ================================================================ */
 const Landing = () => (
-  <div style={{ fontFamily: FONT, overflowX: "hidden" }}>
+  <div className="relative min-h-screen bg-background text-foreground overflow-x-hidden font-poppins">
+    <ParallaxBackground />
     <Navbar />
-    <Hero />
-    <WhoItsFor />
-    <HowItWorks />
-    <SciTech />
-    <WhatYoullSee />
-    <Ethics />
-    <FinalCta />
+    <main className="relative z-10">
+      <Hero />
+      <WhoItsFor />
+      <HowItWorks />
+      <SciTech />
+      <WhatYoullSee />
+      <Ethics />
+      <FinalCta />
+    </main>
     <Footer />
   </div>
 );
