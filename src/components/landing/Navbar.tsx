@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Menu, X } from "lucide-react";
+import { ThemeToggle } from "./ThemeToggle";
 
 const links = [
   { label: "Who it's for", id: "who-its-for" },
@@ -39,7 +40,7 @@ export default function Navbar() {
   }, []);
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 p-4 md:p-6">
+    <header className="fixed top-0 left-0 right-0 z-50 p-4 md:p-6" style={{ top: 3 }}>
       <div className="max-w-6xl mx-auto">
         <nav className="glass-strong rounded-full px-5 py-3 flex items-center justify-between">
           {/* Logo */}
@@ -81,6 +82,7 @@ export default function Navbar() {
             >
               Feedback
             </Link>
+            <ThemeToggle />
             <Link
               to="/app"
               className="ml-2 inline-flex items-center gap-2 px-6 py-2 bg-primary text-primary-foreground rounded-full font-semibold text-sm hover:scale-105 transition-transform no-underline"
@@ -90,13 +92,16 @@ export default function Navbar() {
             </Link>
           </div>
 
-          {/* Mobile hamburger */}
-          <button
-            className="md:hidden p-2 hover:bg-secondary rounded-full transition-colors bg-transparent border-none text-foreground cursor-pointer"
-            onClick={() => setOpen(!open)}
-          >
-            {open ? <X size={22} /> : <Menu size={22} />}
-          </button>
+          {/* Mobile right side */}
+          <div className="md:hidden flex items-center gap-2">
+            <ThemeToggle />
+            <button
+              className="p-2 hover:bg-secondary rounded-full transition-colors bg-transparent border-none text-foreground cursor-pointer"
+              onClick={() => setOpen(!open)}
+            >
+              {open ? <X size={22} /> : <Menu size={22} />}
+            </button>
+          </div>
         </nav>
 
         {/* Mobile menu */}

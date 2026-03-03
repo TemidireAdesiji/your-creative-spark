@@ -9,10 +9,12 @@ import Navbar from "@/components/landing/Navbar";
 import { ScrollReveal } from "@/components/landing/ScrollReveal";
 import { ParallaxBackground } from "@/components/landing/ParallaxBackground";
 import { SkillsProgress } from "@/components/landing/SkillsProgress";
+import { ScrollProgress } from "@/components/landing/ScrollProgress";
+import { FloatingParticles } from "@/components/landing/FloatingParticles";
 
 /* ================================================================ HERO ================================================================ */
 const Hero = () => {
-  const fullText = "Track neurodegenerative symptoms through research‑grade, gamified tasks.";
+  const fullText = "Track neurodegenerative symptoms through research-grade, gamified tasks.";
   const [typed, setTyped] = useState("");
 
   useEffect(() => {
@@ -51,7 +53,7 @@ const Hero = () => {
         <ScrollReveal delay={200}>
           <p className="text-base md:text-lg text-muted-foreground leading-relaxed max-w-2xl mx-auto mb-10">
             Motion.ly helps clinicians and researchers measure changes in movement
-            and cognition using AI‑assisted tasks and computer‑vision signals
+            and cognition using AI-assisted tasks and computer-vision signals
             (e.g.&nbsp;MediaPipe pose and hand tracking).
           </p>
         </ScrollReveal>
@@ -91,8 +93,8 @@ const Hero = () => {
 /* ================================================================ WHO IT'S FOR ================================================================ */
 const personas = [
   { icon: <Stethoscope size={28} />, title: "Clinicians", desc: "Monitor progression of Parkinson's, ALS, and more with repeatable tasks instead of subjective notes.", color: "text-primary", border: "border-primary/30" },
-  { icon: <FlaskConical size={28} />, title: "Researchers", desc: "Run longitudinal studies with digital tasks and standardized metrics—no expensive lab equipment needed.", color: "text-accent", border: "border-accent/30" },
-  { icon: <Users size={28} />, title: "Patients & Participants", desc: "Play simple games that translate into useful movement and cognitive data—at home or in clinic.", color: "text-purple", border: "border-purple/30" },
+  { icon: <FlaskConical size={28} />, title: "Researchers", desc: "Run longitudinal studies with digital tasks and standardized metrics, no expensive lab equipment needed.", color: "text-accent", border: "border-accent/30" },
+  { icon: <Users size={28} />, title: "Patients & Participants", desc: "Play simple games that translate into useful movement and cognitive data, at home or in clinic.", color: "text-primary", border: "border-primary/30" },
 ];
 
 const WhoItsFor = () => (
@@ -121,7 +123,7 @@ const WhoItsFor = () => (
 /* ================================================================ HOW IT WORKS ================================================================ */
 const steps = [
   { icon: <Gamepad2 size={32} className="text-primary" />, title: "Design tasks", desc: "Create gamified tasks or adapt existing ones using our builder (React + AI assistance)." },
-  { icon: <ScanEye size={32} className="text-primary" />, title: "Capture signals", desc: "While patients perform tasks, we log behaviour (reaction time, accuracy) and—where enabled—MediaPipe‑based movement features (pose, hands, gait)." },
+  { icon: <ScanEye size={32} className="text-primary" />, title: "Capture signals", desc: "While patients perform tasks, we log behaviour (reaction time, accuracy) and, where enabled, MediaPipe-based movement features (pose, hands, gait)." },
   { icon: <TrendingUp size={32} className="text-primary" />, title: "Track change over time", desc: "Summaries and trends help you see whether symptoms are stable, improving, or worsening." },
 ];
 
@@ -164,12 +166,12 @@ const SciTech = () => (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <ScrollReveal delay={0}>
           <div className="glass rounded-2xl p-7 hover-lift h-full">
-            <h3 className="text-lg font-bold text-foreground mb-5">Research‑driven design</h3>
+            <h3 className="text-lg font-bold text-foreground mb-5">Research-driven design</h3>
             <ul className="space-y-3 text-sm text-muted-foreground leading-relaxed list-none p-0">
               {[
                 "Grounded in clinical outcome measures (reaction time, error rates, adherence).",
-                "Built to support longitudinal analysis, not one‑off tests.",
-                "Computer vision via MediaPipe: pre‑trained models for pose and hand tracking; we consume landmarks and motion features.",
+                "Built to support longitudinal analysis, not one-off tests.",
+                "Computer vision via MediaPipe: pre-trained models for pose and hand tracking; we consume landmarks and motion features.",
               ].map((t) => (
                 <li key={t} className="flex gap-2">
                   <span className="text-primary font-bold shrink-0">✓</span>
@@ -191,7 +193,7 @@ const SciTech = () => (
 /* ================================================================ WHAT YOU'LL SEE ================================================================ */
 const tiles = [
   { icon: <LayoutDashboard size={36} className="text-primary" />, title: "Task Dashboard", caption: "Overview of current protocols and tasks." },
-  { icon: <Monitor size={36} className="text-primary" />, title: "Session UI", caption: "Game‑like UI for patients, tuned for clarity and low cognitive load." },
+  { icon: <Monitor size={36} className="text-primary" />, title: "Session UI", caption: "Game-like UI for patients, tuned for clarity and low cognitive load." },
   { icon: <BarChart3 size={36} className="text-primary" />, title: "Trend View", caption: "See how symptoms change over time with rich visualisations." },
 ];
 
@@ -227,8 +229,8 @@ const Ethics = () => (
   <section className="relative py-16 px-6">
     <div className="max-w-3xl mx-auto">
       <ScrollReveal>
-        <div className="glass rounded-2xl p-7 flex gap-4 items-start border-l-2 border-accent/50">
-          <ShieldAlert size={26} className="text-accent shrink-0 mt-0.5" />
+        <div className="glass rounded-2xl p-7 flex gap-4 items-start border-l-2" style={{ borderColor: "hsl(42 84% 50% / 0.5)" }}>
+          <ShieldAlert size={26} className="shrink-0 mt-0.5" style={{ color: "hsl(42 84% 50%)" }} />
           <div className="text-sm text-muted-foreground leading-relaxed">
             <strong className="text-foreground">Ethics &amp; disclaimer</strong><br />
             Motion.ly is <strong>not</strong> a medical device and is not approved for
@@ -244,7 +246,6 @@ const Ethics = () => (
 /* ================================================================ FINAL CTA ================================================================ */
 const FinalCta = () => (
   <section className="relative py-24 px-6">
-    {/* Glow orb */}
     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-primary/8 rounded-full blur-3xl" />
 
     <div className="relative z-10 text-center">
@@ -284,7 +285,7 @@ const Footer = () => (
       </a>
     </p>
     <p className="text-xs text-muted-foreground/50">
-      © {new Date().getFullYear()} Motion.ly — All rights reserved.
+      © {new Date().getFullYear()} Motion.ly. All rights reserved.
     </p>
   </footer>
 );
@@ -292,7 +293,9 @@ const Footer = () => (
 /* ================================================================ PAGE ================================================================ */
 const Landing = () => (
   <div className="relative min-h-screen bg-background text-foreground overflow-x-hidden font-poppins">
+    <ScrollProgress />
     <ParallaxBackground />
+    <FloatingParticles />
     <Navbar />
     <main className="relative z-10">
       <Hero />

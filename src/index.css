@@ -6,7 +6,7 @@
 
 @layer base {
   :root {
-    /* Motion.ly Dark Theme — Futuristic Teal */
+    /* Motion.ly Dark Theme — Futuristic Green */
     --background: 0 0% 5.5%;          /* #0E0E0E */
     --foreground: 30 14% 95%;          /* #F5F3F0 */
 
@@ -25,8 +25,8 @@
     --muted: 250 18% 13%;
     --muted-foreground: 0 0% 70%;
 
-    --accent: 42 84% 50%;              /* #E6A817 amber */
-    --accent-foreground: 0 0% 5.5%;
+    --accent: 160 30% 45%;             /* softer green */
+    --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 30 14% 95%;
@@ -39,17 +39,18 @@
 
     /* Custom tokens */
     --purple: 265 42% 55%;             /* #7C5CBF */
+    --amber: 42 84% 50%;               /* kept for Ethics section */
     --surface-transparent: 0 0% 5.5% / 0.8;
     --glow-primary: 174 70% 36% / 0.35;
-    --glow-accent: 42 84% 50% / 0.3;
+    --glow-accent: 160 30% 45% / 0.3;
     --glow-purple: 265 42% 55% / 0.3;
 
     --shadow-cta: 0 0 34px hsl(var(--glow-primary)), 0 0 0 4px hsl(174 70% 36% / 0.1);
     --shadow-glow: 0 0 40px hsl(var(--glow-primary)), 0 0 80px hsl(var(--glow-primary));
 
-    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)));
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(174 50% 70%));
     --gradient-mesh: radial-gradient(at 0% 0%, hsl(var(--primary) / 0.06) 0px, transparent 50%),
-                      radial-gradient(at 100% 100%, hsl(var(--accent) / 0.04) 0px, transparent 50%);
+                      radial-gradient(at 100% 100%, hsl(160 30% 45% / 0.04) 0px, transparent 50%);
 
     --sidebar-background: 0 0% 7%;
     --sidebar-foreground: 30 14% 95%;
@@ -58,6 +59,56 @@
     --sidebar-accent: 0 0% 12%;
     --sidebar-accent-foreground: 30 14% 95%;
     --sidebar-border: 0 0% 14%;
+    --sidebar-ring: 174 70% 36%;
+  }
+
+  .light {
+    --background: 0 0% 98%;
+    --foreground: 0 0% 10%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 10%;
+
+    --primary: 174 70% 36%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 174 15% 93%;
+    --secondary-foreground: 0 0% 20%;
+
+    --muted: 0 0% 94%;
+    --muted-foreground: 0 0% 40%;
+
+    --accent: 160 30% 45%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 88%;
+    --input: 0 0% 90%;
+    --ring: 174 70% 36%;
+
+    --surface-transparent: 0 0% 100% / 0.8;
+    --glow-primary: 174 70% 36% / 0.2;
+    --glow-accent: 160 30% 45% / 0.15;
+
+    --shadow-cta: 0 0 24px hsl(174 70% 36% / 0.2), 0 0 0 3px hsl(174 70% 36% / 0.08);
+    --shadow-glow: 0 0 30px hsl(174 70% 36% / 0.15);
+
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(174 50% 55%));
+    --gradient-mesh: radial-gradient(at 0% 0%, hsl(var(--primary) / 0.04) 0px, transparent 50%),
+                      radial-gradient(at 100% 100%, hsl(160 30% 45% / 0.03) 0px, transparent 50%);
+
+    --sidebar-background: 0 0% 97%;
+    --sidebar-foreground: 0 0% 10%;
+    --sidebar-primary: 174 70% 36%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 94%;
+    --sidebar-accent-foreground: 0 0% 10%;
+    --sidebar-border: 0 0% 88%;
     --sidebar-ring: 174 70% 36%;
   }
 }
@@ -93,6 +144,13 @@
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border: 1px solid hsl(0 0% 100% / 0.1);
+  }
+
+  .light .glass {
+    border-color: hsl(0 0% 0% / 0.06);
+  }
+  .light .glass-strong {
+    border-color: hsl(0 0% 0% / 0.08);
   }
 
   /* Neon Glow */
@@ -207,12 +265,32 @@
     animation: glowPulse 3s ease-in-out infinite;
   }
 
-  /* Fade in */
+  /* Fade in up */
   @keyframes fadeInUp {
     from { opacity: 0; transform: translateY(20px); }
     to { opacity: 1; transform: translateY(0); }
   }
   .animate-fade-in-up {
     animation: fadeInUp 0.5s ease-out forwards;
+  }
+
+  /* Floating particles */
+  @keyframes floatUp {
+    0% { transform: translateY(100vh) translateX(0); opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { transform: translateY(-10vh) translateX(20px); opacity: 0; }
+  }
+
+  .floating-particle {
+    position: fixed;
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: hsl(var(--primary));
+    box-shadow: 0 0 6px hsl(var(--glow-primary)), 0 0 12px hsl(var(--glow-primary));
+    pointer-events: none;
+    z-index: 1;
+    animation: floatUp linear infinite;
   }
 }
