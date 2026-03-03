@@ -8,6 +8,7 @@ import {
   Head,
   Heading,
   Html,
+  Img,
   Preview,
   Text,
 } from 'npm:@react-email/components@0.0.22'
@@ -22,6 +23,7 @@ export const ReauthenticationEmail = ({ token }: ReauthenticationEmailProps) => 
     <Preview>Your verification code</Preview>
     <Body style={main}>
       <Container style={container}>
+        <Img src="https://hungbyxiqfyepyvqaemk.supabase.co/storage/v1/object/public/email-assets/logo.png" alt="MotionlyAI" width="60" height="60" style={logo} />
         <Heading style={h1}>Confirm your identity</Heading>
         <Text style={text}>Use the code below to verify it's you:</Text>
         <Text style={codeStyle}>{token}</Text>
@@ -37,6 +39,7 @@ export default ReauthenticationEmail
 
 const main = { backgroundColor: '#ffffff', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }
 const container = { padding: '32px 28px' }
+const logo = { margin: '0 0 20px' }
 const h1 = { fontSize: '24px', fontWeight: 'bold' as const, color: '#1a1f36', margin: '0 0 20px' }
 const text = { fontSize: '15px', color: '#6b7280', lineHeight: '1.6', margin: '0 0 24px' }
 const codeStyle = { fontFamily: 'Courier, monospace', fontSize: '28px', fontWeight: 'bold' as const, color: '#1DA39A', margin: '0 0 30px', letterSpacing: '4px' }
