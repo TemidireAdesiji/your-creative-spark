@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Star, RefreshCw } from "lucide-react";
+import { ArrowLeft, Star, RefreshCw, LogOut } from "lucide-react";
 
 type FeedbackRow = {
   id: string;
@@ -25,6 +25,19 @@ export default function AdminFeedback() {
   const navigate = useNavigate();
   const [rows, setRows] = useState<FeedbackRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [authChecked, setAuthChecked] = useState(false);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        navigate("/admin/login", { replace: true });
+        return;
+      }
+      setAuthChecked(true);
+    };
+    checkAuth();
+  }, [navigate]);
 
   const fetchFeedback = async () => {
     setLoading(true);
@@ -36,7 +49,16 @@ export default function AdminFeedback() {
     setLoading(false);
   };
 
-  useEffect(() => { fetchFeedback(); }, []);
+  useEffect(() => {
+    if (authChecked) fetchFeedback();
+  }, [authChecked]);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate("/admin/login", { replace: true });
+  };
+
+  if (!authChecked) return null;
 
   const avgRating = rows.length ? (rows.reduce((s, r) => s + r.rating, 0) / rows.length).toFixed(1) : "—";
 
@@ -49,10 +71,16 @@ export default function AdminFeedback() {
           </Button>
           <h1 className="text-2xl font-bold tracking-tight">Feedback Dashboard</h1>
         </div>
-        <Button variant="outline" size="sm" onClick={fetchFeedback} disabled={loading}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={fetchFeedback} disabled={loading}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+            Refresh
+          </Button>
+          <Button variant="ghost" size="sm" onClick={handleLogout}>
+            <LogOut className="h-4 w-4 mr-2" />
+            Logout
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
