@@ -123,7 +123,7 @@ const personas = [
 
 const FlipCard = ({ persona, index }: { persona: typeof personas[0]; index: number }) => (
   <ScrollReveal delay={index * 120}>
-    <div className="group h-72 [perspective:1000px]">
+    <div className="group h-72 [perspective:1000px] isolate relative z-0 hover:z-10">
       <div className="relative w-full h-full transition-transform duration-700 [transform-style:preserve-3d] group-hover:[transform:rotateY(180deg)]">
         {/* Front */}
         <div className={`absolute inset-0 glass rounded-2xl p-7 border-t-2 ${persona.border} [backface-visibility:hidden] flex flex-col`}>
