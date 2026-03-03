@@ -361,6 +361,15 @@ const HomeScreen=({setTab,openGameChallenge,xp,streak})=>{
         <div><p style={{margin:"0 0 3px",fontSize:12,fontWeight:600,color:C.black,fontFamily:"DM Sans,sans-serif"}}>Today's Insight</p><p style={{margin:0,fontSize:12,color:C.tealDark,lineHeight:1.6,fontFamily:"DM Sans,sans-serif"}}>7.5h sleep → spasm count typically <strong>62% lower</strong> on days after quality rest.</p></div>
       </div>
 
+      <button onClick={()=>window.location.href="/feedback"} style={{margin:"12px 20px 0",width:"calc(100% - 40px)",background:`linear-gradient(135deg,${C.teal},${C.tealDark})`,borderRadius:18,padding:"14px 16px",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:12,textAlign:"left"}}>
+        <div style={{width:34,height:34,borderRadius:11,background:"rgba(255,255,255,.18)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><Icon name="star" size={16} color="#fff"/></div>
+        <div style={{flex:1}}>
+          <p style={{margin:"0 0 2px",fontSize:12,fontWeight:600,color:"#fff",fontFamily:"DM Sans,sans-serif"}}>Share Your Feedback</p>
+          <p style={{margin:0,fontSize:11,color:"rgba(255,255,255,.7)",fontFamily:"DM Sans,sans-serif"}}>Help us improve your experience</p>
+        </div>
+        <Icon name="forward" size={16} color="rgba(255,255,255,.6)"/>
+      </button>
+
       {/* My Conditions */}
       <div style={{padding:"16px 20px 0"}}>
         <h2 style={{fontFamily:"Fraunces,serif",fontWeight:700,fontSize:20,color:C.black,margin:"0 0 4px"}}>My Conditions</h2>
