@@ -9,6 +9,7 @@ import {
   Head,
   Heading,
   Html,
+  Img,
   Link,
   Preview,
   Text,
@@ -27,6 +28,7 @@ export const EmailChangeEmail = ({ siteName, email, newEmail, confirmationUrl }:
     <Preview>Confirm your email change for {siteName}</Preview>
     <Body style={main}>
       <Container style={container}>
+        <Img src="https://hungbyxiqfyepyvqaemk.supabase.co/storage/v1/object/public/email-assets/logo.png" alt="MotionlyAI" width="60" height="60" style={logo} />
         <Heading style={h1}>Confirm your email change</Heading>
         <Text style={text}>
           You requested to change your email for {siteName} from{' '}
@@ -47,6 +49,7 @@ export default EmailChangeEmail
 
 const main = { backgroundColor: '#ffffff', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }
 const container = { padding: '32px 28px' }
+const logo = { margin: '0 0 20px' }
 const h1 = { fontSize: '24px', fontWeight: 'bold' as const, color: '#1a1f36', margin: '0 0 20px' }
 const text = { fontSize: '15px', color: '#6b7280', lineHeight: '1.6', margin: '0 0 24px' }
 const link = { color: '#1DA39A', textDecoration: 'underline' }
