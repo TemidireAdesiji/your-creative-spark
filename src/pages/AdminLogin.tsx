@@ -60,6 +60,23 @@ export default function AdminLogin() {
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Signing in…" : "Sign In"}
             </Button>
+            <button
+              type="button"
+              className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors"
+              onClick={async () => {
+                if (!email) {
+                  toast.error("Enter your email first, then click forgot password");
+                  return;
+                }
+                const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                  redirectTo: `${window.location.origin}/reset-password`,
+                });
+                if (error) toast.error(error.message);
+                else toast.success("Password reset link sent — check your email");
+              }}
+            >
+              Forgot password?
+            </button>
           </form>
         </CardContent>
       </Card>
