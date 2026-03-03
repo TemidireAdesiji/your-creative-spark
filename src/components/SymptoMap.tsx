@@ -361,14 +361,6 @@ const HomeScreen=({setTab,openGameChallenge,xp,streak})=>{
         <div><p style={{margin:"0 0 3px",fontSize:12,fontWeight:600,color:C.black,fontFamily:"DM Sans,sans-serif"}}>Today's Insight</p><p style={{margin:0,fontSize:12,color:C.tealDark,lineHeight:1.6,fontFamily:"DM Sans,sans-serif"}}>7.5h sleep → spasm count typically <strong>62% lower</strong> on days after quality rest.</p></div>
       </div>
 
-      <button onClick={()=>window.location.href="/feedback"} style={{margin:"12px 20px 0",width:"calc(100% - 40px)",background:`linear-gradient(135deg,${C.teal},${C.tealDark})`,borderRadius:18,padding:"14px 16px",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:12,textAlign:"left"}}>
-        <div style={{width:34,height:34,borderRadius:11,background:"rgba(255,255,255,.18)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><Icon name="star" size={16} color="#fff"/></div>
-        <div style={{flex:1}}>
-          <p style={{margin:"0 0 2px",fontSize:12,fontWeight:600,color:"#fff",fontFamily:"DM Sans,sans-serif"}}>Share Your Feedback</p>
-          <p style={{margin:0,fontSize:11,color:"rgba(255,255,255,.7)",fontFamily:"DM Sans,sans-serif"}}>Help us improve your experience</p>
-        </div>
-        <Icon name="forward" size={16} color="rgba(255,255,255,.6)"/>
-      </button>
 
       {/* My Conditions */}
       <div style={{padding:"16px 20px 0"}}>
@@ -1732,6 +1724,49 @@ const ProgressScreen=({xp,streak})=>{
 };
 
 /* ══════════════════════════════════════════════════════════════════
+   CONTACT US
+══════════════════════════════════════════════════════════════════ */
+const ContactScreen=()=>{
+  return(
+    <div style={{padding:"20px 20px 40px"}}>
+      <h1 style={{fontFamily:"Fraunces,serif",fontSize:24,fontWeight:700,color:C.black,margin:"0 0 4px"}}>Contact Us</h1>
+      <p style={{margin:"0 0 20px",fontSize:12,color:C.mid,fontFamily:"DM Sans,sans-serif",lineHeight:1.6}}>We'd love to hear from you. Reach out or share feedback below.</p>
+
+      <button onClick={()=>window.location.href="/feedback"} style={{width:"100%",background:`linear-gradient(135deg,${C.teal},${C.tealDark})`,borderRadius:18,padding:"14px 16px",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:12,textAlign:"left",marginBottom:16}}>
+        <div style={{width:34,height:34,borderRadius:11,background:"rgba(255,255,255,.18)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><Icon name="star" size={16} color="#fff"/></div>
+        <div style={{flex:1}}>
+          <p style={{margin:"0 0 2px",fontSize:12,fontWeight:600,color:"#fff",fontFamily:"DM Sans,sans-serif"}}>Share Your Feedback</p>
+          <p style={{margin:0,fontSize:11,color:"rgba(255,255,255,.7)",fontFamily:"DM Sans,sans-serif"}}>Help us improve your experience</p>
+        </div>
+        <Icon name="forward" size={16} color="rgba(255,255,255,.6)"/>
+      </button>
+
+      <div style={{background:C.bg2,borderRadius:18,padding:"16px",marginBottom:12}}>
+        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
+          <div style={{width:34,height:34,borderRadius:11,background:C.tealLight,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><Icon name="phone" size={16} color={C.teal}/></div>
+          <div>
+            <p style={{margin:"0 0 2px",fontSize:12,fontWeight:600,color:C.black,fontFamily:"DM Sans,sans-serif"}}>Email Support</p>
+            <p style={{margin:0,fontSize:11,color:C.mid,fontFamily:"DM Sans,sans-serif"}}>support@motionly.app</p>
+          </div>
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <div style={{width:34,height:34,borderRadius:11,background:C.amberLight,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><Icon name="heart" size={16} color={C.amber}/></div>
+          <div>
+            <p style={{margin:"0 0 2px",fontSize:12,fontWeight:600,color:C.black,fontFamily:"DM Sans,sans-serif"}}>Community</p>
+            <p style={{margin:0,fontSize:11,color:C.mid,fontFamily:"DM Sans,sans-serif"}}>Join our support community</p>
+          </div>
+        </div>
+      </div>
+
+      <div style={{background:C.bg2,borderRadius:18,padding:"16px"}}>
+        <p style={{margin:"0 0 4px",fontSize:12,fontWeight:600,color:C.black,fontFamily:"DM Sans,sans-serif"}}>Response Times</p>
+        <p style={{margin:0,fontSize:11,color:C.mid,fontFamily:"DM Sans,sans-serif",lineHeight:1.7}}>We typically respond within 24 hours during business days. For urgent issues, please include "URGENT" in your feedback.</p>
+      </div>
+    </div>
+  );
+};
+
+/* ══════════════════════════════════════════════════════════════════
    SHELL
 ══════════════════════════════════════════════════════════════════ */
 export default function App(){
@@ -1754,6 +1789,7 @@ export default function App(){
         {tab==="game"    &&<GameScreen addXP={addXP} initialPhase={gameInitialPhase} onPhaseApplied={()=>setGameInitialPhase(null)}/>}
         {tab==="log"     &&<LogScreen  addXP={addXP}/>}
         {tab==="progress"&&<ProgressScreen xp={xp} streak={streak}/>}
+        {tab==="contact" &&<ContactScreen/>}
       </div>
       <div style={{display:"flex",background:C.bg,borderTop:`1px solid ${C.border}`,padding:"9px 0 calc(env(safe-area-inset-bottom, 0px) + 12px)",flexShrink:0,position:"sticky",bottom:0,zIndex:100}}>
         {[
@@ -1761,6 +1797,7 @@ export default function App(){
           {id:"game",    label:"Challenges", icon:(a)=><Icon name="game"  size={21} color={a?C.teal:C.light}/>},
           {id:"log",     label:"Log",        icon:(a)=><Icon name="log"   size={21} color={a?C.black:C.light}/>},
           {id:"progress",label:"Progress",   icon:(a)=><Icon name="chart" size={21} color={a?C.black:C.light}/>},
+          {id:"contact", label:"Contact",    icon:(a)=><Icon name="phone" size={21} color={a?C.black:C.light}/>},
         ].map(t=>{const a=tab===t.id;return(
           <button key={t.id} onClick={()=>setTab(t.id)} style={{flex:1,background:"none",border:"none",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:3,padding:"3px 0"}}>
             {t.icon(a)}
