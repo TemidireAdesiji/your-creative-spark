@@ -7,7 +7,9 @@ import Index from "./pages/Index";
 import SymptoMap from "./components/SymptoMap";
 import Feedback from "./pages/Feedback";
 import AdminLogin from "./pages/AdminLogin";
+import AdminSignup from "./pages/AdminSignup";
 import AdminFeedback from "./pages/AdminFeedback";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -23,7 +25,9 @@ const App = () => (
           <Route path="/app" element={<SymptoMap />} />
           <Route path="/feedback" element={<Feedback />} />
           <Route path="/admin/login" element={<AdminLogin />} />
+          <Route path="/admin/signup" element={<AdminSignup />} />
           <Route path="/admin/feedback" element={<AdminFeedback />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
