@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Stethoscope, FlaskConical, Gamepad2, ScanEye, TrendingUp,
   Users, ShieldAlert, ArrowRight, ChevronDown,
@@ -158,10 +159,23 @@ const FlipCard = ({ persona, index, flipped, onFlip }: { persona: typeof persona
 );
 
 const WhoItsFor = () => {
-  const [flippedIndex, setFlippedIndex] = useState<number | null>(null);
+  const isMobile = useIsMobile();
+  const [flippedSet, setFlippedSet] = useState<Set<number>>(new Set());
 
   const handleFlip = (index: number) => {
-    setFlippedIndex((prev) => (prev === index ? null : index));
+    setFlippedSet((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) {
+        next.delete(index);
+      } else {
+        if (!isMobile) {
+          // Desktop: only one at a time
+          next.clear();
+        }
+        next.add(index);
+      }
+      return next;
+    });
   };
 
   return (
@@ -173,7 +187,7 @@ const WhoItsFor = () => {
         </ScrollReveal>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {personas.map((p, i) => (
-            <FlipCard key={p.title} persona={p} index={i} flipped={flippedIndex === i} onFlip={() => handleFlip(i)} />
+            <FlipCard key={p.title} persona={p} index={i} flipped={flippedSet.has(i)} onFlip={() => handleFlip(i)} />
           ))}
         </div>
       </div>
