@@ -24,6 +24,15 @@ const ratingColor = (r: number) => {
 export default function AdminFeedback() {
   const navigate = useNavigate();
   const [rows, setRows] = useState<FeedbackRow[]>([]);
+
+  // Force light theme
+  useEffect(() => {
+    document.documentElement.classList.add("light");
+    return () => {
+      const saved = localStorage.getItem("theme");
+      if (saved !== "light") document.documentElement.classList.remove("light");
+    };
+  }, []);
   const [loading, setLoading] = useState(true);
   const [authChecked, setAuthChecked] = useState(false);
 
