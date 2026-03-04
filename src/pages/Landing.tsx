@@ -121,10 +121,17 @@ const personas = [
   },
 ];
 
-const FlipCard = ({ persona, index }: { persona: typeof personas[0]; index: number }) => (
+const FlipCard = ({ persona, index, flipped, onFlip }: { persona: typeof personas[0]; index: number; flipped: boolean; onFlip: () => void }) => (
   <ScrollReveal delay={index * 120}>
-    <div className="group h-72 [perspective:1000px] isolate relative z-0 hover:z-10">
-      <div className="relative w-full h-full transition-transform duration-700 [transform-style:preserve-3d] group-hover:[transform:rotateY(180deg)]">
+    <div
+      className="h-72 [perspective:1000px] isolate relative z-0"
+      style={{ zIndex: flipped ? 10 : 0 }}
+      onClick={onFlip}
+    >
+      <div
+        className="relative w-full h-full transition-transform duration-700 [transform-style:preserve-3d] md:group-hover:[transform:rotateY(180deg)]"
+        style={{ transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)" }}
+      >
         {/* Front */}
         <div className={`absolute inset-0 glass rounded-2xl p-7 border-t-2 ${persona.border} [backface-visibility:hidden] flex flex-col`}>
           <div className={`mb-4 ${persona.color}`}>{persona.icon}</div>
@@ -150,22 +157,30 @@ const FlipCard = ({ persona, index }: { persona: typeof personas[0]; index: numb
   </ScrollReveal>
 );
 
-const WhoItsFor = () => (
-  <section id="who-its-for" className="relative py-24 px-6">
-    <div className="max-w-5xl mx-auto">
-      <ScrollReveal>
-        <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-center mb-4 gradient-text">Who it's for</h2>
-        <div className="divider-glow max-w-xs mx-auto mb-12" />
-      </ScrollReveal>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {personas.map((p, i) => (
-          <FlipCard key={p.title} persona={p} index={i} />
-        ))}
+const WhoItsFor = () => {
+  const [flippedIndex, setFlippedIndex] = useState<number | null>(null);
+
+  const handleFlip = (index: number) => {
+    setFlippedIndex((prev) => (prev === index ? null : index));
+  };
+
+  return (
+    <section id="who-its-for" className="relative py-24 px-6">
+      <div className="max-w-5xl mx-auto">
+        <ScrollReveal>
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-center mb-4 gradient-text">Who it's for</h2>
+          <div className="divider-glow max-w-xs mx-auto mb-12" />
+        </ScrollReveal>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {personas.map((p, i) => (
+            <FlipCard key={p.title} persona={p} index={i} flipped={flippedIndex === i} onFlip={() => handleFlip(i)} />
+          ))}
+        </div>
       </div>
-    </div>
-    <div className="divider-glow max-w-5xl mx-auto mt-24" />
-  </section>
-);
+      <div className="divider-glow max-w-5xl mx-auto mt-24" />
+    </section>
+  );
+};
 
 /* ================================================================ HOW IT WORKS ================================================================ */
 const steps = [
