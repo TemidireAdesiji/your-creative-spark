@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Star, RefreshCw, LogOut } from "lucide-react";
+import { toast } from "sonner";
 
 type FeedbackRow = {
   id: string;
@@ -40,6 +41,16 @@ export default function AdminFeedback() {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
+        navigate("/admin/login", { replace: true });
+        return;
+      }
+      const { data: isAdmin, error } = await supabase.rpc("has_role", {
+        _user_id: session.user.id,
+        _role: "admin",
+      });
+      if (error || !isAdmin) {
+        toast.error("You don't have admin access");
+        await supabase.auth.signOut();
         navigate("/admin/login", { replace: true });
         return;
       }
